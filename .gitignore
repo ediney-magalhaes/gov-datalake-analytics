@@ -1,0 +1,5 @@
+#ignorar arquivos de dados (segurança)
+*.csv
+
+#ignorar arquivos temporários do sistema
+__pycache__/
