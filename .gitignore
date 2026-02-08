@@ -1,5 +1,8 @@
 #ignorar arquivos de dados (segurança)
 *.csv
-
+*.zip
+*.xlsx
 #ignorar arquivos temporários do sistema
 __pycache__/
+.DS_Store
+.env

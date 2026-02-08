@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  # Serviço 1: Nosso Banco de Dados (Postgres)
+  db_hospital:
+    image: postgres:15
+    container_name: postgres_conahp
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=segredo
+      - POSTGRES_DB=conahp_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Serviço 2: Interface Gráfica para ver o Banco (Adminer)
+  # (Como não instalamos DBeaver ainda, vamos usar isso para ver os dados no navegador)
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db_hospital
+
+# Volumes persistentes (para não perder o banco quando desligar)
+volumes:
+  pgdata:

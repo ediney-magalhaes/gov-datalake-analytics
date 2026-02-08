@@ -4,7 +4,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Instala a biblioteca que vamos usar
-RUN pip install pandas
+RUN pip install pandas sqlalchemy psycopg2-binary
 
 # Copia APENAS o script. O CSV vai entrar depois "por mágica" (Volume)
 COPY main.py .

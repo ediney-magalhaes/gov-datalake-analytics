@@ -1,29 +1,40 @@
 import pandas as pd
+from sqlalchemy import create_engine
 import os
 
+# Configurações
 ARQUIVO_ENTRADA = '/data/dados.csv'
-ARQUIVO_SAIDA = '/data/relatorio_final.csv'
 
-print('--- INICIANDO PROCESSAMENTO ETL ---')
+# String de Conexão: tipo://usuario:senha@onde_esta_o_banco:porta/nome_banco
+# Note que 'db_hospital' é o nome do serviço que demos no docker-compose!
+DB_CONNECTION = 'postgresql://admin:segredo@db_hospital:5432/conahp_db'
 
-# 1. EXTRACT (Extração)
-# Verifica se o arquivo existe antes de tentar ler
-if not os.path.exists(ARQUIVO_ENTRADA):
-    print(f'ERRO CRÍTICO: Não encontrei o arquivo em {ARQUIVO_ENTRADA}')
-    print(f'Dica: Verifique se o Volume do Docker foi montado corretamente.')
-    exit(1)
+print("--- INICIANDO ETL COM BANCO DE DADOS ---")
 
-print(f"Lendo arquivo: {ARQUIVO_ENTRADA}...")
-df = pd.read_csv(ARQUIVO_ENTRADA)
+try:
+    # 1. Extract (Ler CSV)
+    print(f"Lendo arquivo: {ARQUIVO_ENTRADA}...")
+    df = pd.read_csv(ARQUIVO_ENTRADA)
 
-# 2. TRANSFORM (Transformação)
-# Vamos calcular o Custo Médio Diário (evitando divisão por zero)
-print("Aplicando regras de negócio...")
-df['custo_medio_diario'] = df['custo_internacao'] / (df['dias_uti'].replace(0, 1))
-df['custo_medio_diario'] = df['custo_medio_diario'].round(2)
+    # 2. Transform (Simples limpeza para garantir)
+    # Vamos garantir que as colunas do CSV batam com o banco
+    # Supondo que seu CSV já tenha colunas compatíveis. 
+    # Se não tiver, o Pandas tenta adaptar.
+    
+    print("Processando dados...")
+    # Exemplo: Renomeando colunas se necessário (ajuste conforme seu CSV real se der erro)
+    # df = df.rename(columns={'Customer': 'hospital', ...})
 
-# 3. LOAD (Carga)
-print(f"Salvando resultados em: {ARQUIVO_SAIDA}...")
-df.to_csv(ARQUIVO_SAIDA, index=False)
+    # 3. Load (Inserir no Postgres)
+    print("Conectando ao Banco de Dados...")
+    engine = create_engine(DB_CONNECTION)
+    
+    print("Inserindo dados na tabela 'internacoes'...")
+    # if_exists='append': Adiciona os dados sem apagar os antigos
+    # index=False: Não envia o número da linha do Excel/CSV
+    df.to_sql('internacoes', engine, if_exists='append', index=False)
+    
+    print("--- SUCESSO! DADOS SALVOS NO POSTGRESQL ---")
 
-print("--- SUCESSO! ETL FINALIZADO ---")
+except Exception as e:
+    print(f"❌ ERRO CRÍTICO: {e}")
