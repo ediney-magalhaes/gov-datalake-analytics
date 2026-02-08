@@ -3,13 +3,13 @@
 
 **Projeto:** Implementação de Data Lake Governamental (SIAPE)
 **Data:** 02/02/2026
-**Responsável:** [Seu Nome] - Engenheiro de Dados
+**Responsável:** Ediney Magalhães - Engenheiro de Dados
 **Versão:** 1.0
 
 ---
 
 ## 1. Sumário Executivo
-Este documento formaliza a entrega do **Produto 1**, compreendendo a ingestão da base bruta de servidores federais (Novembro/2025) e o diagnóstico de qualidade dos dados. Foram ingeridos com sucesso **772.471 registros**, identificando-se inconsistências críticas de completude (CPFs nulos) e padronização (cargos mistos) que serão tratadas na próxima fase (Camada Prata).
+Este documento formaliza a análise do **Produto 1**, compreendendo a ingestão da base bruta de servidores federais (Novembro/2025) e o diagnóstico de qualidade dos dados. Foram ingeridos com sucesso **772.471 registros**, identificando-se inconsistências críticas de completude (CPFs nulos) e padronização (cargos mistos) que serão tratadas na próxima fase (Camada Prata).
 
 ---
 
@@ -18,7 +18,7 @@ Para garantir a auditabilidade, segurança e reprodutibilidade do processo, foi 
 
 ### 2.1 Stack Tecnológico e Orquestração
 A infraestrutura foi desenhada para suportar escalabilidade horizontal:
-- **Orquestração (Target):** Apache Airflow (Proposto para Produção) / Scripts Python (Ambiente de Lab).
+- **Orquestração (Target):** Scripts Python (Ambiente de Lab).
 - **Armazenamento:** PostgreSQL 15 (Camada Bronze).
 - **Ingestão:** Python 3.13 (Pandas/SQLAlchemy).
 
