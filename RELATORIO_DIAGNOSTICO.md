@@ -29,37 +29,29 @@ Abaixo, o fluxo proposto contemplando a interoperabilidade entre as bases do Blo
 graph TD
     %% Fontes de Dados
     subgraph Origem [Fontes de Dados Governamentais]
-        A[("SIAPE (CSV)
-        Ativos - Bloco 1")]
-        B[("Aposentados (CSV)
-        Inativos - Bloco 1")]
-        C[("Pesquisa Vozes
-        Simulado - Bloco 2")]
+        A[("SIAPE (CSV) Ativos - Bloco 1")]
+        B[("Aposentados (CSV) Inativos - Bloco 1")]
+        C[("Pesquisa Vozes Simulado - Bloco 2")]
     end
 
     %% Camada Bronze (Ingestão)
     subgraph Bronze [Data Lake - Bronze Layer]
-        D[Ingestão Batch (Python)]
-        E[(tb_cadastro_bronze
-        Raw Data)]
-        F[(tb_aposentados_bronze
-        Raw Data)]
+        D["Ingestão Batch (Python)"]
+        E[("tb_cadastro_bronze Raw Data")]
+        F[("tb_aposentados_bronze Raw Data")]
     end
 
     %% Camada Prata (Saneamento)
     subgraph Prata [Data Warehouse - Silver Layer]
-        G[Normalização e Limpeza]
-        H[(stg_servidores
-        CPF Validado)]
-        I[(stg_movimentacoes
-        Cruzamento Ativo x Inativo)]
+        G["Normalização e Limpeza"]
+        H[("stg_servidores CPF Validado")]
+        I[("stg_movimentacoes Cruzamento Ativo x Inativo")]
     end
 
     %% Camada Ouro (Business Intelligence)
     subgraph Ouro [Analytics - Gold Layer]
-        J[Modelagem Dimensional]
-        K[(dm_forca_trabalho
-        Painel de Gestão)]
+        J["Modelagem Dimensional"]
+        K[("dm_forca_trabalho Painel de Gestão")]
     end
 
     %% Fluxo
@@ -76,7 +68,7 @@ graph TD
     I --> J
     J --> K
 
-    %% Estilos (Cores para facilitar leitura)
+    %% Estilos
     style A fill:#ffccbc,stroke:#333
     style E fill:#b3e5fc,stroke:#0277bd
     style H fill:#fff9c4,stroke:#fbc02d
