@@ -79,7 +79,7 @@ graph TD
 Os dados foram carregados na tabela `cadastro_bronze` utilizando tipagem dinâmica (`VARCHAR`) e permissividade de nulos (`NULL`). Essa estratégia previne a perda de dados durante a carga, transferindo a responsabilidade da limpeza para o banco de dados.
 
 **Evidência de Carga:**
-*(Insira aqui o seu print `evidencia_bronze.png`)*
+![Evidência de Carga Bronze](./evidencia_bronze.png)
 > Figura 1: Amostra de dados carregados no Adminer, demonstrando volumetria e tipagem mista.
 
 ---
