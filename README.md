@@ -1,6 +1,6 @@
 # 🏛️ Projeto Data Lake - Gestão de Pessoal (Governo Federal)
 
-Repositório oficial para os artefatos técnicos do **Edital nº 01/2026** (Simulação Prática).
+Repositório oficial para os artefatos técnicos (Simulação Prática).
 Este projeto visa estruturar a arquitetura de dados para análise de folha de pagamento, aposentadorias e diversidade do executivo federal.
 
 ---
@@ -15,7 +15,7 @@ Este projeto visa estruturar a arquitetura de dados para análise de folha de pa
 
 ## 📂 Estrutura do Repositório
 
-* **[`RELATORIO_DIAGNOSTICO.md`](./RELATORIO_DIAGNOSTICO.md)**: 📄 **(Produto 1)** Relatório técnico detalhado com o diagnóstico da qualidade dos dados (SIAPE/Aposentados), volumetria e matriz de riscos.
+* **[`RELATORIO_DIAGNOSTICO.md`](./RELATORIO_DIAGNOSTICO.md)**: 📄 Relatório técnico detalhado com o diagnóstico da qualidade dos dados (SIAPE/Aposentados), volumetria e matriz de riscos.
 * **Scripts de Ingestão (`.py`)**: Códigos Python utilizados para extração e carga inicial no Data Lake local.
 * **Docker Compose**: Definição da infraestrutura de banco de dados (PostgreSQL) utilizada na Fase 1.
 
@@ -25,7 +25,7 @@ Este projeto visa estruturar a arquitetura de dados para análise de folha de pa
 * **Linguagem:** Python 3.13 (Pandas, SQLAlchemy)
 * **Banco de Dados:** PostgreSQL 15
 * **Containerização:** Docker
-* **Auditoria:** SQL Avançado (Adminer)
+* **Auditoria:** SQL Analítico e SQL para Auditoria de Dados
 
 ---
 *Desenvolvido por Ediney Magalhães - Analytics Engineer*
