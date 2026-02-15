@@ -2,7 +2,14 @@
 *.csv
 *.zip
 *.xlsx
+*.json
 #ignorar arquivos temporários do sistema
 __pycache__/
 .DS_Store
 .env
+
+# GCP Credentials
+service_account.json
+
+# Logs (podem conter fragmentos de dados sensíveis ou apenas poluir o repo)
+*.log
