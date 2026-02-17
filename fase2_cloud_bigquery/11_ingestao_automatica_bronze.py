@@ -54,7 +54,6 @@ for indice, mes in enumerate(meses_carga):
                 df_mes['CPF'] = df_mes['CPF'].apply(lambda x: hashlib.sha256(str(x).encode()).hexdigest())
                 #guarda o mes referencia
                 df_mes['MES_REFERENCIA'] = mes
-                # ... (suas linhas de Hash de CPF e MES_REFERENCIA ficam aqui) ...
                 
                 logging.info(f"Preparando envio do mês {mes} ({len(df_mes)} linhas)...")
                 
