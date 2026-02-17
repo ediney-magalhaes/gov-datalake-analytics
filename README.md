@@ -18,9 +18,9 @@ O objetivo é estruturar um Data Lake moderno em camadas (Bronze → Prata → O
 
 ## 🧱 Arquitetura da Solução
 
-Portal da Transparência (API / arquivos .zip)  
+Fontes: Portal da Transparência (SIAPE) e Escola Virtual Gov (ENAP)  
 ↓  
-Python (Streaming em memória + Hash SHA-256 + Micro-batching)  
+Python (Extração em Memória + Descompactação Complexa + Hash SHA-256)  
 ↓  
 Google BigQuery (Camada Bronze)  
 ↓  
@@ -32,12 +32,12 @@ Consumo Analítico (BI / Dashboards)
 
 ## ⚙️ Principais Características Técnicas
 
-### 🔹 Ingestão Cloud Native
+### 🔹 Ingestão Cloud Native (Multi-Fontes)
 
-- Download automático de arquivos públicos (.zip) via API
-- Processamento direto em memória (`io.BytesIO`)
-- Eliminação de arquivos físicos locais
-- Pipeline 100% automatizado
+- Download automático de arquivos públicos massivos via APIs governamentais.
+- **Portal da Transparência (SIAPE):** Extração via micro-batching de arquivos `.zip`.
+- **Escola Virtual Gov (ENAP):** Extração e descompactação dupla (`.tar.gz` contendo `.gzip` interno) lidando com separadores não padronizado (`|`).
+- Processamento direto em memória RAM (`io.BytesIO`), com eliminação de arquivos físicos locais (Zero disco).
 
 ---
 
@@ -73,17 +73,17 @@ Consumo Analítico (BI / Dashboards)
 
 ## 📊 Desafios Técnicos Resolvidos
 
-- Processamento de grandes volumes sem estouro de memória
-- Integração resiliente com dados públicos inconsistentes
-- Anonimização determinística para cruzamento seguro
-- Arquitetura escalável para evolução futura com dbt
+- Processamento de grandes volumes (milhões de linhas) sem estouro de memória (OOM).
+- Resolução de compactação oculta em arquivos governamentais (arquivos GZIP escondidos dentro de pacotes TAR).
+- Anonimização determinística idempotente: o pipeline mantém o padrão SHA-256 mesmo ingerindo bases com diferentes níveis de mascaramento na origem (ex: MD5 pré-mascarado).
+- Arquitetura escalável desenhada em documento formal (RFC/ADR) para evolução futura.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 **Linguagem:** Python 3.13  
-**Bibliotecas:** Pandas, SQLAlchemy, requests, io, zipfile, hashlib, logging  
+**Bibliotecas:** Pandas, SQLAlchemy, google-cloud-bigquery, requests, io, zipfile, tarfile, hashlib, logging  
 **Banco Local:** PostgreSQL 15  
 **Cloud Data Warehouse:** Google BigQuery  
 **Containerização:** Docker  
@@ -93,10 +93,11 @@ Consumo Analítico (BI / Dashboards)
 
 ## 📁 Estrutura do Repositório
 
-- `fase1_local_postgres/` → Ingestão inicial e diagnóstico local
-- `fase2_cloud_bigquery/` → Ingestão automática Cloud Native
-- `RELATORIO_DIAGNOSTICO.md` → Relatório técnico de qualidade de dados
-- Scripts `.py` → Automação e carga de dados
+- `fase1_local_postgres/` → Ingestão inicial e diagnóstico local.
+- `fase2_cloud_bigquery/` → Ingestão automática Cloud Native.
+- `PROPOSTA_ARQUITETURA_MAPEAMENTO.md` → Desenho arquitetural, premissas, riscos e trade-offs do ecossistema.
+- `RELATORIO_DIAGNOSTICO.md` → Relatório técnico de qualidade de dados.
+- Scripts `.py` → Automação e carga de dados.
 
 ---
 
