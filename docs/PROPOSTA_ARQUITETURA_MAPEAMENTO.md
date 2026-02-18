@@ -50,3 +50,45 @@ Para garantir a sustentabilidade, segurança e escalabilidade do Data Lake, o de
 * **ELT vs. ETL Tradicional:** Optou-se pelo ELT (descarregar primeiro, transformar depois) para alavancar o poder de processamento massivo e paralelo (MPP) do Google BigQuery, reduzindo o tempo de máquina da aplicação Python.
 * **Micro-batching vs. Processamento em Memória Total:** Abriu-se mão de um código mais curto e de concatenação total (`pd.concat`) em favor de múltiplos *jobs* de *Append*, trocando um leve overhead de rede pela garantia de estabilidade da memória do servidor.
 * **Pseudonimização Criptográfica vs. Tabela de De/Para:** Optou-se pelo Hash Determinístico (SHA-256) sem salt aleatório. O trade-off é a impossibilidade técnica de reverter o CPF original, garantindo a LGPD de forma irreversível, mas ganhando a capacidade de realizar *JOINs* exatos com a base da ENAP.
+
+## ⚠️ Matriz de Riscos Técnicos e Mitigação
+
+Como o Data Lake consome dados de fontes externas governamentais, foram mapeados os seguintes riscos e suas respectivas estratégias de mitigação arquitetural:
+
+| Risco Identificado | Nível de Impacto | Estratégia de Mitigação (Contramedida) |
+|:---|:---:|:---|
+| **1. Indisponibilidade das APIs (Portal da Transparência / ENAP)** | Alto | Implementação de blocos `try/except` nos scripts Python, registro do erro no arquivo `auditoria_bronze.log` e ausência de falha em cascata (o pipeline não trava, apenas reporta a indisponibilidade). |
+| **2. Alteração repentina de layout (Mudança de colunas na origem)** | Alto | Processamento agnóstico na Camada Bronze (ingestão "as is"). O bloqueio e alerta de mudança de esquema serão implementados na Fase 3 via testes de Qualidade de Dados (dbt tests) na Camada Prata. |
+| **3. Estouro de Memória (OOM - Out of Memory) por alto volume** | Médio | Arquitetura *Cloud Native* utilizando streams em memória (`io.BytesIO`) e extração iterativa (arquivos internos de `.zip` e `.tar.gz` tratados individualmente), eliminando a necessidade de grandes discos locais ou memória RAM massiva. |
+| **4. Exposição acidental de PII (Dados Pessoais Sensíveis)** | Altíssimo | O pipeline de ingestão aplica Hash SHA-256 de forma determinística *in-flight* (antes do dado tocar o BigQuery). Os dados chegam na nuvem já pseudonimizados. |
+
+---
+
+## 💻 Requisitos de Infraestrutura e Recursos Necessários
+
+Para a operação plena deste pipeline, a arquitetura exige o seguinte *setup* mínimo, focado em alta escalabilidade e baixo custo (FinOps):
+
+* **Processamento (Computação):**
+  * Ambiente de execução Python 3.12+ (Pode ser executado localmente, em VMs básicas, ou via *Cloud Functions*/*Cloud Run* no futuro).
+  * Conexão de internet com banda larga para download de arquivos massivos (1GB+).
+* **Armazenamento e Data Warehouse (GCP):**
+  * Conta ativa no Google Cloud Platform (GCP).
+  * API do **Google BigQuery** habilitada.
+  * Uso contido dentro do *Free Tier* (10 GB de armazenamento e 1 TB de query/mês gratuitos).
+* **Segurança (IAM):**
+  * *Service Account* do GCP com permissão de `BigQuery Data Editor` e `BigQuery User`.
+  * Chave de acesso `.json` isolada e protegida (ignorada no controle de versão via `.gitignore`).
+
+  ## 🔐 Governança e Otimização de Custos (FinOps) no BigQuery
+
+Para garantir a escalabilidade analítica e o controle rigoroso de custos na nuvem (FinOps), a arquitetura define as seguintes diretrizes para as camadas Prata e Ouro:
+
+### 1. Estratégia de Particionamento e Clustering
+O Google BigQuery cobra por volume de dados processados em cada consulta (query). Para mitigar varreduras completas (Full Table Scans):
+* **Particionamento (Partitioning):** As tabelas Fato e grandes volumes na Camada Prata serão particionadas por data (ex: `Mês/Ano de Competência` da folha de pagamento do SIAPE). Isso isola os dados fisicamente.
+* **Clustering:** O agrupamento de dados será aplicado em colunas de alta cardinalidade e uso frequente em filtros de BI (ex: `Órgão de Lotação` ou `UF do Servidor`), acelerando o tempo de resposta do painel.
+
+### 2. Políticas de Retenção e Versionamento
+* **Data Lineage:** A linhagem de dados (Origem → Bronze → Prata → Ouro) será documentada e gerada automaticamente via **dbt docs**, garantindo a rastreabilidade visual do fluxo ETL.
+* **Versionamento de Schema:** Mudanças estruturais nos dados serão controladas via repositório Git. As transformações serão tratadas como código (Analytics as Code).
+* **Slowly Changing Dimensions (SCD):** O histórico de mudanças de atributos dos servidores (ex: mudança de cargo ou estado) será gerenciado via SCD Tipo 2 na Fase de Modelagem Ouro, utilizando *Snapshots*.
