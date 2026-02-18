@@ -24,7 +24,7 @@ A arquitetura *Cloud Native* desenvolvida com processamento em memória entregou
 * **Tempo Médio de Ingestão:** ~5 minutos para carga total (Origem → Cloud).
 * **Velocidade de Processamento (Throughput):** Picos de **+1.600 linhas processadas por segundo** (incluindo criptografia SHA-256 registro a registro).
 * **Custo Estimado por Consulta (FinOps):** Redução de leitura de dados via partition pruning e cluster elimination no BigQuery (Consultas analíticas limitadas à casa dos Megabytes, mantendo o projeto dentro do *Free Tier* do GCP).
-* **Taxa de Sucesso do Pipeline (Resiliência):** Arquitetura projetada para suportar SLA de 99.9%.
+* **Taxa de Sucesso do Pipeline (Estimado):** Arquitetura projetada para alta disponibilidade, com meta de SLA técnico estimado em 99.9%.
 
 ---
 
@@ -55,7 +55,7 @@ A arquitetura *Cloud Native* desenvolvida com processamento em memória entregou
 ## ⚙️ Principais Características Técnicas
 
 🔹 **Estratégia de Modelagem Analítica e Data Warehousing (Fase 3)**
-A arquitetura de consumo (Camada Ouro) foi desenhada sob o paradigma *Cloud Native*, preterindo o modelo clássico de *Star Schema* em favor de uma **Wide Table Analítica (OBT - One Big Table)**.
+A arquitetura de consumo (Camada Ouro) foi desenhada sob o paradigma *Cloud Native*, optando por **Wide Table Analítica (OBT - One Big Table)** como estratégia otimizada para consumo analítico em BigQuery.
 
 * **1. Granularidade Única e Clara:** 1 linha por servidor por mês de competência (Chave Primária Composta: `hash_cpf` + `mes_referencia`), evitando explosão de cardinalidade (fan-out).
 
