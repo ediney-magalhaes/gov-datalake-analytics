@@ -7,7 +7,7 @@
 ---
 
 ## 👥 Participantes da Validação
-* **Líder Técnico / Engenharia de Dados:** Ediney Junior
+* **Data Engineer:** Ediney Junior
 * **Área de Negócios (Cliente):** Equipe SGP e Diretoria ENAP *(Simulação para fins de Edital)*
 
 ---
