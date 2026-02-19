@@ -18,8 +18,8 @@ Em alinhamento com a Estratégia Federal de Governo Digital (Portaria SGD/MGI n�
 Através da **Arquitetura Medallion (Bronze, Silver, Gold)**, o pipeline:
 
 - Automatiza a coleta
-- Aplica anonimização (LGPD) *in-flight*
-- Entrega bases consolidadas para subsidiar painéis analíticos estratégicos
+- Aplica anonimização (LGPD) in-flight
+- Entrega bases consolidadas para subsidiar painéis estratégicos
 
 ---
 
@@ -35,7 +35,17 @@ A arquitetura *Cloud Native* desenvolvida com processamento em memória entregou
 
 - **Consumo de Disco Local:** 0 bytes (Processamento 100% `in-memory` via `io.BytesIO`)
 - **Otimização de Custos (FinOps):** Uso de *partition pruning* e *cluster elimination*, mantendo consultas na casa dos MBs (Free Tier GCP)
-- **Taxa de Sucesso Observada:** 100% nas execuções de stress test (sem ocorrência de timeouts após mitigação via headers customizados e micro-batching)
+- **Taxa de Sucesso Observada:** 100% nas execuções de stress test realizadas até o momento (sem ocorrência de timeouts após mitigação via headers customizados e micro-batching)
+
+---
+
+## ✅ Qualidade de Dados (Fase 3)
+
+A confiabilidade da Camada Prata é garantida por testes automatizados via **dbt Core**:
+
+- **Auditoria de Unicidade:** Implementação de teste de chave composta (`hash_cpf` + `mes_competencia` + `id_vinculo`) para evitar duplicidade de pagamentos.
+- **Tratamento de Duplicidade Técnica:** Deduplicação via `ROW_NUMBER()` para neutralizar falhas de envio da fonte de dados (Portal da Transparência).
+- **Integridade de Campos:** 100% de conformidade nos testes de `not_null` para identificadores e nomes.
 
 ---
 
@@ -45,7 +55,7 @@ A arquitetura *Cloud Native* desenvolvida com processamento em memória entregou
 |------|------------|--------|------------|
 | Fase 1 (Local) | Docker + PostgreSQL + Python | ✅ Concluída | Ingestão inicial + Diagnóstico |
 | Fase 2 (Cloud - Bronze) | BigQuery + Python | ✅ Concluída | Ingestão via API + Hash LGPD + Logs |
-| Fase 3 (Cloud - Prata/Ouro) | BigQuery + dbt | 🚧 Em andamento | Modelagem dimensional + SCD |
+| Fase 3 (Cloud - Prata/Ouro) | BigQuery + dbt | 🚧 Em andamento | Camada de Staging + Testes de Qualidade |
 
 ---
 
@@ -159,7 +169,7 @@ Materialização via `insert_overwrite` (dbt), garantindo:
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="caminho/para/sua-chave.json"
 ```
-### 3 Configuração
+### 3 Execução
 ```bash
 python fase_2/00_orquestrador_bronze.py
 ```
@@ -172,9 +182,10 @@ python fase_2/00_orquestrador_bronze.py
 ## 📁 Estrutura do Repositório
 ```
 /
-├── docs/
-├── fase_1/
-├── fase_2/
+├── docs/                 # Documentação, Dicionários e Homologações
+├── fase_1/               # Scripts iniciais locais
+├── fase_2/               # Ingestão Cloud (Python)
+├── analytics_gov/        # Projeto dbt (Camada Prata e Transformação)
 ├── .gitignore
 ├── CONTRIBUTING.md
 └── README.md
@@ -184,15 +195,15 @@ python fase_2/00_orquestrador_bronze.py
 ## 🚀 Roadmap Técnico – Fase 3
 
 ### Camada Prata
-- Tipagem estrita (DATE, NUMERIC)
+- Tipagem estrita (DATE, NUMERIC) 
 - Tratamento de nulos
 - dbt tests (`not_null`, `unique`, `accepted_values`)
 - SCD Tipo 2
 
 ### Camada Ouro
-- OBT incremental
-- Particionamento físico
-- Clusterização otimizada
+- Materialização incremental (insert_overwrite)
+- PARTITION BY mes_referencia
+- CLUSTER BY orgao, uf, hash_cpf
 
 ### Governança
 - Data lineage via `dbt docs`

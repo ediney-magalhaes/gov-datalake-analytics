@@ -1,15 +1,16 @@
-#ignorar arquivos de dados (segurança)
+# Dados e Segurança
 *.csv
 *.zip
 *.xlsx
 *.json
-#ignorar arquivos temporários do sistema
-__pycache__/
-.DS_Store
+service_account.json
 .env
 
-# GCP Credentials
-service_account.json
-
-# Logs (podem conter fragmentos de dados sensíveis ou apenas poluir o repo)
+# Python e Sistema
+__pycache__/
+.DS_Store
 *.log
+
+# IDEs
+.vscode/
+.idea/
