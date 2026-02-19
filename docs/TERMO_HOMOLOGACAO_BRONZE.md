@@ -1,37 +1,27 @@
-# 📄 Termo de Homologação (UAT) - Camada Bronze
+# 📑 Termo de Homologação Técnica (UAT) - Camada Bronze
 
-**Projeto:** Data Lake Analytics GOV  
-**Fase de Entrega:** Produto 2 - Ingestão e Camada Bronze  
-**Data da Homologação:** 17 de Fevereiro de 2026  
+**Projeto:** Data Lake - Gestão de Pessoal (Governo Federal)
+**Fase:** Produto 2 - Protótipo Funcional de Pipeline Integrado
+**Data de Validação:** 18 de Fevereiro de 2026
 
----
+## 1. Escopo da Homologação
+Atesta-se a conclusão e o funcionamento automatizado da ingestão multi-fontes na Camada Bronze (Google BigQuery), orquestrada pelo script central `00_orquestrador_bronze.py`. As três bases consolidadas foram:
+1. **SIAPE (Servidores Ativos):** Cadastro de pessoal.
+2. **ENAP:** Histórico de capacitação e cursos.
+3. **SIAPE (Aposentados e Pensionistas):** Histórico de inativos do executivo federal.
 
-## 👥 Participantes da Validação
-* **Data Engineer:** Ediney Junior
-* **Área de Negócios (Cliente):** Equipe SGP e Diretoria ENAP *(Simulação para fins de Edital)*
+## 2. Métricas de Performance e Stress Test
+Durante a execução do pipeline de ingestão em nuvem, o robô registrou as seguintes métricas de pico (Ref: Carga da Base de Aposentados):
+* **Volume Processado:** 4.950.249 registros.
+* **Tempo de Execução:** 319.34 segundos (~5.3 minutos).
+* **Throughput (Velocidade):** 15.501 linhas tratadas e ingeridas por segundo.
+* **Consumo de Disco Local:** 0 bytes (Processamento 100% em memória RAM via `io.BytesIO`).
+* **SLA de Conexão:** Sucesso na evasão de *Timeouts* e bloqueios de Firewall (WAF) via injeção de Headers e *Micro-batching*.
 
----
+## 3. Conformidade Legal e Segurança (LGPD)
+Validado o processo de pseudonimização *in-flight*. A coluna de identificação pessoal (`CPF`) de todas as bases foi convertida com sucesso em chaves criptográficas (`SHA-256`) na memória volátil, antes do envio e armazenamento na nuvem.
 
-## ✅ Critérios de Aceite e Validação Técnica
-
-Os testes de carga foram executados em ambiente controlado, validando os seguintes requisitos arquiteturais e de negócio estabelecidos no edital:
-
-- [x] **Volumetria e Integridade:** As contagens de linhas na Camada Bronze (BigQuery) conferem com a extração dos sistemas de origem (SIAPE e ENAP). Ex: *Carga ENAP homologada com 330.972 registros mensais.*
-- [x] **Conformidade LGPD:** Auditoria nos dados inseridos confirmou que a coluna `CPF` foi anonimizada via Hash SHA-256 *in-flight*, impossibilitando a identificação direta do servidor público sem a chave reversa.
-- [x] **Performance e FinOps:** O pipeline demonstrou alta eficiência computacional. A carga da base consolidada da ENAP foi processada integralmente em memória RAM, registrando velocidade média de **1.612 linhas processadas por segundo**.
-- [x] **Resiliência e Logs:** Simulações de falha de conexão (Erro 404) e auditoria de volumetria foram registradas corretamente no arquivo `auditoria_bronze.log`.
-
----
-
-## ✍️ Assinaturas de Aprovação
-
-Atestamos que o **Produto 2 (Protótipo Funcional de Pipeline Integrado)** atende aos requisitos técnicos e de governança. O pipeline está autorizado a seguir para a construção das Camadas Prata e Ouro (Fase 3 - Transformação via dbt).
-
-<br>
-
-___________________________________________________
-**Ediney Junior** *Engenheiro de Dados Sênior (Tech Lead)* <br>
-
-___________________________________________________
-**Equipe SGP / Validador do Edital** *Aprovação Funcional* ```
-
+## 4. Assinaturas de Validação
+* **Arquiteto/Engenheiro de Dados:** Ediney Magalhães Junior
+* **Validação Técnica:** Evidência registrada via logs estruturados e verificação de volumetria no BigQuery.
+* **Status Final:** ✅ Validado tecnicamente e pronto para evolução à Camada Prata (dbt).

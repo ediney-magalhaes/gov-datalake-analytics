@@ -25,11 +25,12 @@ Este documento detalha as fontes de dados mapeadas para o Data Lake do Governo F
 
 ---
 
-## 3. Sistema de Gestão de Pessoas (SGP - Afastamentos)
-* **Descrição:** Histórico de licenças, afastamentos e viagens a serviço (Simulação via API do Portal da Transparência).
-* **Formato de Origem:** API REST retornando payload em `JSON`.
-* **Frequência de Atualização:** Diária/Semanal.
-* **Método de Ingestão:** Paginação de API REST (a ser implementado).
-* **Restrições LGPD e Segurança:**
-  * Informações de saúde (CID) em caso de licença médica são anonimizadas ou suprimidas.
-  * O CPF sofre o mesmo processo de Hash SHA-256 para permitir futuro cruzamento (JOIN) com as bases SIAPE e ENAP na Camada Ouro.
+## 3. Servidores Inativos e Pensionistas (SIAPE - Aposentadorias)
+* **Fonte:** Portal da Transparência do Governo Federal (API Pública).
+* **Frequência de Atualização:** Mensal.
+* **Formato de Origem:** Arquivo `.zip` contendo `.csv` (separador `;`, encoding `latin1`).
+* **Granularidade:** 1 linha por servidor inativo/pensionista por mês de competência.
+* **Volume Médio:** ~410.000 registros por mês (Totalizando ~4.95 milhões de registros anuais).
+* **Tratamento LGPD (Bronze):** Coluna `CPF` mascarada via hash determinístico `SHA-256` em tempo real de ingestão (antes do armazenamento no BigQuery).
+
+---
