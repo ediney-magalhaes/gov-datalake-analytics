@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Camada Bronze: Dados brutos ingeridos via API do Portal da Transparência e ENAP."
+    database: gov-datalake-analytics
+    schema: bronze
+    tables:
+      - name: siape_ingestao_automatica
+        description: "Dados de servidores ativos do Poder Executivo."
+      - name: aposentados_ingestao_automatica
+        description: "Dados de aposentados e pensionistas do Poder Executivo."
+      - name: enap_ingestao_automatica
+        description: "Dados massivos de capacitação e cursos da Escola Virtual Gov (ENAP)."
