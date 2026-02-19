@@ -9,7 +9,7 @@ Este documento estabelece as diretrizes de versionamento de código, ramificaç�
 Adotamos um fluxo simplificado baseado no **GitHub Flow**, garantindo agilidade e proteção ao código em produção:
 
 * **`main`**: É a branch principal e protegida. Reflete o código que está em produção (Camadas Bronze, Prata e Ouro funcionais).
-* **`feature/nome-da-feature`**: Branches criadas a partir da `main` para desenvolver novas funcionalidades (Ex: `feature/ingestao-sgp`, `feature/dbt-modelagem-ouro`).
+* **`feature/nome-da-feature`**: Branches criadas a partir da `main` para desenvolver novas funcionalidades (Ex: `feature/ingestao-aposentados`, `feature/dbt-modelagem-ouro`).
 * **`bugfix/nome-do-bug`**: Branches criadas para corrigir erros em produção (Ex: `bugfix/erro-divisao-zero-siape`).
 
 Nenhum commit direto deve ser feito na `main` durante fases críticas. Todo código deve passar por um processo de *Pull Request (PR)*.
@@ -38,3 +38,15 @@ O histórico de versionamento do projeto segue a especificação rigorosa do [Co
 4. Realiza os commits semânticos (`git commit -m "feat: sua mensagem"`).
 5. Sobe a branch para o repositório remoto (`git push origin feature/nova-tarefa`).
 6. Abre um *Pull Request* para revisão do Líder Técnico antes do *merge* na branch `main`.
+
+---
+
+## ✅ Definition of Done (DoD)
+
+Antes de abrir um Pull Request, verifique:
+
+- [ ] Código executa sem erros
+- [ ] Logs estruturados estão funcionando
+- [ ] Não há credenciais ou dados sensíveis no commit
+- [ ] Documentação foi atualizada (se aplicável)
+- [ ] Commit segue padrão Conventional Commits
