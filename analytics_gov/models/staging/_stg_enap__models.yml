@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: stg_enap_capacitacao
+    description: "Tabela de cursos da ENAP com dados limpos e padronizados."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hash_cpf
+              - id_curso
+              - data_matricula
+    columns:
+      - name: hash_cpf
+        description: "CPF do servidor (identificador único para cruzamento)"
+        tests:
+          - not_null
+
+      - name: id_curso
+        tests:
+          - not_null
