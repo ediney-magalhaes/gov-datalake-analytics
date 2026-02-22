@@ -20,11 +20,6 @@ Este documento integra o Produto 1 — Descoberta e Mapeamento Técnico (As-Is).
 - **Granularidade:** 1 linha por servidor ativo por mês de competência.
 - **Método de Ingestão:** Requisição HTTP com headers customizados, descompactação em memória (io.BytesIO) e micro-batching mensal.
 
-### LGPD e Segurança
-- CPF é tratado como dado sensível.
-- Aplicação de hash determinístico SHA-256 in-flight (antes da persistência).
-- Nenhum dado bruto é persistido em disco local (processamento em memória).
-- Nomes e cargos mantidos em texto claro, amparados pela Lei de Acesso à Informação (LAI).
 
 ---
 
@@ -61,7 +56,8 @@ Devido à presença de caracteres especiais, acentos, símbolos monetários e as
 
 # Camada Prata — Transformação (dbt)
 
-As tabelas da Camada Prata passam por tipagem estrita, renomeação semântica e deduplicação técnica.
+- As tabelas da Camada Prata passam por tipagem estrita, renomeação semântica e deduplicação técnica.
+- Valores nulos críticos tratados via regras de negócio (ex: COALESCE para 0.00 em salários vazios). Campos imputados permanecem rastreáveis via testes de auditoria (dbt tests) para evitar falsos positivos na Camada Ouro
 
 ## Mapeamento Técnico Principal (Exemplo: stg_siape_ativos)
 
