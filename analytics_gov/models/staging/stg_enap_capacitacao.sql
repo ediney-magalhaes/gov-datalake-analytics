@@ -4,7 +4,7 @@ WITH source AS (
 renamed AS(
     SELECT
     CAST(HASH_CPF_ORIGEM AS STRING) AS hash_cpf, -- transforma da coluna HASH_CPF_ORIGEM em String
-    CAST(cod_curso AS STRING) AS id_curso, -- transforma da coluna cod_curso em String
+    COALESCE(CAST(cod_curso AS STRING), 'NAO_INFORMADO') AS id_curso, -- transforma da coluna cod_curso em String
     CAST(carga_horaria AS STRING) AS carga_horaria, -- transforma da coluna carga_horaria em String
     CAST(dt_matricula AS STRING) AS data_matricula, -- transforma da coluna dt_matricula em String
     TRIM(sit_matricula) AS situacao_matricula, -- remove os espaços da coluna sit_matricula
@@ -16,4 +16,4 @@ renamed AS(
     ) AS linha_numero
     FROM source
 )
-SELECT * FROM renamed WHERE linha_numero = 1 AND id_curso IS NOT NULL
+SELECT * FROM renamed WHERE linha_numero = 1
