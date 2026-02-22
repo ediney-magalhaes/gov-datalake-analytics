@@ -1,106 +1,67 @@
-# 📑 Termo de Homologação Técnica — Camada Prata (Transformação)
+# Termo de Homologação Técnica — Camada Prata (Transformação)
 
 **Projeto:** Data Lake Analytics — Gestão de Pessoal (SIAPE)  
-**Data de Homologação:** 19/02/2026  
+**Data de Homologação:** 21/02/2026  
 **Responsável Técnico:** Ediney Magalhães Junior — Analytics Engineer  
 
 ---
 
-## 1️⃣ Escopo da Homologação
+## 1. Escopo da Homologação
 
-Este documento formaliza a validação técnica da **Camada Prata (Staging)** do Data Lake, responsável pela transformação dos dados brutos da Camada Bronze em estruturas padronizadas, consistentes e auditáveis.
+Este documento formaliza a validação técnica da Camada Prata (Staging) do Data Lake, responsável pela transformação dos dados brutos da Camada Bronze em estruturas padronizadas, consistentes e auditáveis.
 
-As transformações foram implementadas utilizando **dbt (Data Build Tool)**, seguindo princípios de:
-
-- ELT (Extract, Load, Transform)
-- Analytics as Code
-- Governança orientada a testes automatizados
-- Garantia de integridade referencial
-
----
-
-## 2️⃣ Modelos Implementados
-
-| Tabela Origem (Bronze) | Modelo dbt (Prata) | Finalidade |
-|------------------------|--------------------|------------|
-| `aposentados_ingestao_automatica` | `stg_siape_aposentados` | Limpeza, padronização, tipagem e deduplicação dos dados de servidores aposentados |
+As transformações foram implementadas utilizando dbt Core, seguindo princípios de:
+- ELT (Extract, Load, Transform).
+- Analytics as Code.
+- Governança orientada a testes automatizados.
+- Idempotência no processamento de dados.
 
 ---
 
-## 3️⃣ Regras de Engenharia Aplicadas
+## 2. Modelos Homologados nesta Fase
 
-Durante o processo de transformação foram implementadas as seguintes regras técnicas:
-
-- 🔹 Padronização de nomes de colunas (snake_case)
-- 🔹 Tipagem explícita de campos críticos
-- 🔹 Tratamento de valores nulos indevidos
-- 🔹 Deduplicação baseada em lógica de janela (`ROW_NUMBER()`)
-
----
-
-## 4️⃣ Controles Automatizados de Qualidade (Produto 3)
-
-Foram configurados testes automáticos via `dbt test`, garantindo integridade e confiabilidade dos dados:
-
-### ✔ Teste de Unicidade (Composite Key)
-Validação da chave composta:
-
-```
-hash_cpf + mes_competencia + id_vinculo
-```
-
-
-Objetivo: impedir duplicidade de pagamentos ou vínculos no mesmo período.
+| Tabela Origem (Bronze) | Modelo dbt (Prata) | Status |
+|:--- |:--- |:--- |
+| `remuneracao_ingestao_automatica` | `stg_siape_ativos` | Homologado |
+| `aposentados_ingestao_automatica` | `stg_siape_aposentados` | Homologado |
+| `capacitacao_enap_bronze` | `stg_enap_capacitacao` | Homologado |
 
 ---
 
-### ✔ Teste de Integridade (Not Null)
+## 3. Regras de Engenharia e Observabilidade
 
-Campos críticos auditados:
+Durante o processo de transformação, foram implementadas as seguintes regras de tratamento:
+- **Padronização Semântica:** Conversão de nomes de colunas originais para snake_case.
+- **Tipagem Estrita:** Conversão de campos de texto para DATE, NUMERIC e INTEGER conforme a natureza do dado.
+- **Deduplicação de Vínculos:** Aplicação de ROW_NUMBER() para garantir a unicidade de registros por CPF, Vínculo e Competência.
+- **Imputação de Valores:** Tratamento de campos nulos identificados nos testes para manutenção da volumetria via substituição por valores padrão (ex: 'NAO INFORMADO').
 
-- `hash_cpf`
-- `nome_servidor`
-- `mes_competencia`
-- `id_vinculo`
+---
+
+## 4. Auditoria de Qualidade (dbt Test)
+
+A confiabilidade da camada foi validada através de uma suíte de testes automatizados:
+
+### Teste de Unicidade (Unique)
+Garante que não existam registros duplicados para a chave composta (hash_cpf + mes_competencia + id_vinculo).
+
+### Teste de Integridade (Not Null)
+Monitoramento de campos mandatórios. Conforme logs de auditoria, os testes identificaram valores nulos na base de origem (ENAP), os quais foram devidamente saneados na lógica de transformação da Camada Prata.
 
 ---
 
-### ✔ Tratamento Preventivo de Duplicidade
+## 5. Resultado da Suíte de Testes
 
-Implementação de lógica:
-
-```sql
-ROW_NUMBER() OVER (
-    PARTITION BY hash_cpf, mes_competencia, id_vinculo
-    ORDER BY mes_competencia DESC
-)
-```
-
-Mantendo apenas o registro válido por vínculo funcional e mês.
+- **Total de Testes Definidos:** 5 (incluindo testes de unicidade e integridade).
+- **Status de Execução:** Pass.
+- **Observação:** As falhas de integridade detectadas na fonte primária foram mitigadas, não comprometendo a qualidade da Camada Prata resultante.
 
 ---
-## 5️⃣ Resultado dos Testes
 
-- Total de Testes Executados: 3
-- Testes Aprovados: 3
-- Taxa de Sucesso: 100%
-- Ocorrências Críticas: 0
+## 6. Conclusão Técnica
 
----
-## 6️⃣ Conclusão Técnica
+A Camada Prata atende aos requisitos de integridade, consistência e auditabilidade exigidos pelo Produto 3, estando em total conformidade com a LGPD (dados pseudonimizados).
 
-A Camada Prata atende aos requisitos de:
+**Status Final: APROVADA PARA EVOLUÇÃO À CAMADA OURO.**
 
-- Integridade
-- Consistência
-- Auditabilidade
-- Conformidade com LGPD (dados já pseudonimizados na Bronze)
-
-Status Final:
-
-## ✅ APROVADA PARA USO ANALÍTICO E LIBERADA PARA MODELAGEM DA CAMADA OURO
-
-
-Documento gerado como parte do fluxo formal de auditoria técnica do Produto 3.
-
----
+Documento gerado como evidência formal de conformidade técnica.

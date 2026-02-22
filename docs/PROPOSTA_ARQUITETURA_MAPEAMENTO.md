@@ -1,176 +1,92 @@
-# 🏗️ Proposta de Arquitetura de Pipelines de Dados (Produto 1)
+# Proposta de Arquitetura de Pipelines de Dados
 
 **Projeto:** Data Lake - Gestão de Pessoal (Governo Federal)  
-**Objetivo:** Definição da arquitetura técnica do fluxo de dados (Ingestão → Transformação → Consumo), governança, modelagem e mitigação de riscos operacionais.
+**Objetivo:** Definição da arquitetura técnica do fluxo de dados (Ingestão -> Transformação -> Consumo), governança, modelagem e automação de entrega.
 
 ---
 
-# 1️⃣ Visão Geral da Arquitetura
+## 1. Visão Geral da Arquitetura
 
-A solução adota o paradigma **Medallion Architecture (Bronze → Prata → Ouro)**, implementado integralmente em ambiente *Cloud Native* (Google Cloud Platform), priorizando:
+A solução adota o paradigma Medallion Architecture (Bronze -> Prata -> Ouro), implementado integralmente em ambiente Cloud Native (Google Cloud Platform), priorizando:
 
-- Escalabilidade elástica
-- Processamento colunar otimizado
-- Conformidade LGPD
-- Controle de custos (FinOps)
-- Governança orientada a dados
+- Escalabilidade elástica e processamento colunar otimizado.
+- Conformidade estrita com a LGPD (Lei Geral de Proteção de Dados).
+- Implementação de práticas de FinOps para controle de custos.
+- Governança de dados orientada a testes automatizados.
 
 ---
 
-## 🥉 Camada Bronze — Ingestão Bruta
+## 2. Camada Bronze — Ingestão e Resiliência
 
-Responsável pela captura fiel dos dados da origem, preservando rastreabilidade histórica.
+Responsável pela captura fiel dos dados da origem, preservando a rastreabilidade histórica sem persistência local intermediária.
 
 ### Características Técnicas:
-
-- Extração via APIs públicas governamentais
-- Processamento 100% em memória (`io.BytesIO`)
-- Descompactação dupla (`.zip` e `.tar.gz`)
-- Micro-batching mensal
-- Persistência em Google BigQuery
+- Extração via APIs públicas governamentais com tratamento de persistência em memória (io.BytesIO).
+- Descompactação múltipla (ZIP, TAR.GZ, GZIP) em tempo de execução.
+- Normalização de Schema (Whitelisting): Aplicação de Expressões Regulares (Regex) para garantir que 100% dos nomes de colunas sejam compatíveis com o padrão ANSI SQL.
+- Mitigação de Bloqueios: Implementação de Rate Limiting e Headers customizados (User-Agent) para garantir a estabilidade das requisições junto aos servidores governamentais.
 
 ### Segurança (LGPD):
-
-- Pseudonimização determinística (`SHA-256`) aplicada **in-flight**
-- Nenhum arquivo bruto salvo localmente
-- Criptografia antes da persistência em nuvem
-
-### Estratégia de Carga:
-
-- `WRITE_APPEND`
-- Controle incremental por mês de competência
-- Logs estruturados registrando volumetria, tempo e status HTTP
+- Pseudonimização determinística (SHA-256) aplicada in-flight.
+- Criptografia de dados sensíveis antes da persistência em nuvem.
 
 ---
 
-## 🥈 Camada Prata — Transformação e Qualidade (dbt)
+## 3. Camada Prata — Transformação e Qualidade (dbt)
 
-Responsável pela limpeza técnica, padronização e integridade histórica.
+Responsável pela limpeza técnica, tipagem estrita e garantia de integridade histórica.
 
-### Regras Implementadas:
+### Regras de Negócio e Engenharia:
+- Tipagem de dados (DATE, NUMERIC, STRING) e padronização para snake_case.
+- Deduplicação técnica: Uso de funções de janela (ROW_NUMBER) particionadas por hash_cpf, id_vinculo e mes_competencia.
+- Observabilidade de Nulos: Imputação de valores padrão (ex: 'NAO INFORMADO') para manter a integridade da volumetria original da fonte.
 
-- Tipagem estrita (`DATE`, `NUMERIC`, `STRING`)
-- Padronização snake_case
-- Remoção de sujeira técnica
-- Deduplicação por vínculo funcional via:
-
-```sql
-ROW_NUMBER() OVER (PARTITION BY hash_cpf, id_vinculo, mes_competencia)
-```
-
-### Garantia de Unicidade:
-
-Chave composta:
-
-```sql
-hash_cpf + mes_competencia + id_vinculo
-```
-
-Validada por:
-
-- `dbt test`
-- `unique`
-- `not_null`
-- `accepted_values`
+### Validação de Qualidade:
+Execução sistemática de dbt tests (Unique, Not Null, Accepted Values) em cada ciclo de transformação.
 
 ---
 
-## 🥇 Camada Ouro — Consumo Analítico
+## 4. Camada Ouro — Consumo e Otimização (FinOps)
 
-Modelo otimizado para consumo em bancos colunares (BigQuery).
+Modelo otimizado para alta performance analítica no Google BigQuery.
 
-### Estratégia Adotada:
-
-- ✅ OBT (One Big Table)
-- ❌ Evita Star Schema clássico (custoso em JOINs)
-
-### Granularidade Final:
-
-**1 linha por vínculo funcional por mês de competência**
-
-Essa decisão preserva:
-- Acumuladores de cargo
-- Múltiplos vínculos
-- Integridade financeira histórica
+### Estratégia Colunar:
+- Adoção de OBT (One Big Table) para reduzir a complexidade e o custo de JOINs em grandes volumes.
+- Particionamento Físico: PARTITION BY mes_referencia para otimização de scans (Partition Pruning).
+- Agrupamento (Clustering): CLUSTER BY orgao, uf, hash_cpf para acelerar filtros de busca.
 
 ---
 
-## 🔧 Otimização Física (FinOps)
+## 5. Esteira de Entrega (CI/CD e DataOps)
 
-A modelagem da Camada Ouro foi desenhada para explorar ao máximo o mecanismo colunar do BigQuery.
+A arquitetura prevê a implementação de integração e entrega contínua via GitHub Actions para garantir a confiabilidade do ciclo de vida do dado.
 
-### Estratégias Implementadas
+### Integração Contínua (CI):
+- Gatilho automático a cada Push ou Pull Request.
+- Execução automática de testes de schema e qualidade via dbt test.
+- Bloqueio de integração caso falhas críticas de qualidade sejam detectadas.
 
-- `PARTITION BY mes_referencia`
-- `CLUSTER BY orgao, uf, hash_cpf`
-- Materialização incremental via `insert_overwrite` (dbt)
-- Reprocessamento cirúrgico por partição (idempotência garantida)
-
-### Benefícios Técnicos
-
-- Redução significativa de leitura colunar (partition pruning)
-- Aceleração de filtros analíticos (cluster elimination)
-- Previsibilidade orçamentária
-- Facilidade de rollback por mês
-- Evita reprocessamento histórico completo
+### Entrega Contínua (CD):
+- Deploy automatizado de modelos SQL para o ambiente de produção após aprovação dos testes.
+- Gerenciamento de segredos e credenciais via GitHub Secrets.
 
 ---
 
-# 2️⃣ Fluxo Operacional do Pipeline
-
-1. **Orquestração:** `00_orquestrador_bronze.py`
-2. **Extract:** Requisição HTTP com headers customizados
-3. **Load (RAM):** Descompactação e parsing em memória (`io.BytesIO`)
-4. **Security Transform:** Aplicação de hash `SHA-256`
-5. **Load (Cloud):** Ingestão incremental no BigQuery
-6. **Transform (dbt):** Modelagem e testes automatizados
-7. **Exposição:** Consumo por ferramentas de BI e Analytics
-
----
-
-# 3️⃣ Matriz de Riscos Técnicos e Mitigações
+## 6. Matriz de Riscos Técnicos e Mitigações
 
 | Risco Técnico | Impacto | Mitigação Implementada |
-|---------------|----------|-------------------------|
-| Bloqueio ou instabilidade de API governamental | Alto | `try/except`, timeout configurado (120s), User-Agent customizado |
-| Estouro de Memória (OOM) | Alto | Processamento iterativo mensal + `del df_mes` |
-| Vazamento de PII | Gravíssimo | Hash `SHA-256` aplicado antes da persistência |
-| Duplicidade na origem | Médio | Deduplicação via `ROW_NUMBER()` + testes de chave composta no dbt |
-| Crescimento volumétrico | Médio | Arquitetura incremental + particionamento físico |
-| Custo excessivo em nuvem | Médio | Partition pruning + cluster elimination |
+|:--- |:--- |:--- |
+| Bloqueio por Rate Limit (Erro 403) | Alto | Pausas estruturadas (time.sleep) e headers simulando navegadores reais. |
+| Inconsistência de nomes de colunas | Médio | Filtro de Regex (Whitelist) permitindo apenas caracteres alfanuméricos e _. |
+| Estouro de Memória (OOM) | Alto | Processamento iterativo (micro-batching) e limpeza manual de cache (del df). |
+| Duplicidade de registros | Médio | Chave composta e testes de unicidade automatizados no dbt. |
+| Custo excessivo de processamento | Médio | Estratégias de particionamento e agrupamento físico no BigQuery. |
 
 ---
 
-# 4️⃣ Governança e Modelagem
+## 7. Princípios Arquiteturais
 
-## 📌 Data Lineage
-
-Gerenciado automaticamente via `dbt docs`, garantindo rastreabilidade completa:
-
-```
-Source → Bronze → Prata → Ouro
-```
-
-## 📌 Política de Retenção
-
-- Bronze: histórico bruto controlado
-- Prata: dados confiáveis e tratados
-- Ouro: camada analítica otimizada para consumo
-
-## 📌 Analytics as Code
-
-- Transformações versionadas em Git
-- Controle via Conventional Commits
-- Testes automatizados com `dbt test`
-- Reprocessamento incremental idempotente
-
----
-
-# 🎯 Princípios Arquiteturais
-
-- Segurança antes da persistência
-- Transformação após armazenamento (ELT)
-- Processamento incremental
-- Idempotência garantida
-- Governança orientada a testes
-- Otimização para banco colunar
+1. **Segurança First:** Pseudonimização aplicada antes da persistência em nuvem.
+2. **Arquitetura ELT:** Transformação realizada após o carregamento (Extract, Load, Transform).
+3. **Idempotência:** Garantia de que reprocessamentos não gerem duplicidade ou corrupção de dados.
+4. **Analytics as Code:** Todo o pipeline de transformação e teste é versionado e documentado.
