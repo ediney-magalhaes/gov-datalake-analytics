@@ -54,6 +54,7 @@ Modelo otimizado para alta performance analítica no Google BigQuery.
 - Adoção de OBT (One Big Table) para reduzir a complexidade e o custo de JOINs em grandes volumes.
 - Particionamento Físico: PARTITION BY mes_referencia para otimização de scans (Partition Pruning).
 - Agrupamento (Clustering): CLUSTER BY orgao, uf, hash_cpf para acelerar filtros de busca.
+- Na Camada Ouro (OBT), a materialização padrão planejada é incremental com estratégia insert_overwrite particionada por mes_referencia. Motivo: FinOps (redução de custo de scan no BigQuery) e idempotência.
 
 ---
 

@@ -6,10 +6,10 @@ models:
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
-          combination_of_columns:
-          - hash_cpf
-          - mes_competencia
-          - id_vinculo
+            combination_of_columns:
+            - hash_cpf
+            - mes_competencia
+            - id_vinculo
     columns:
       - name: hash_cpf
         description: "CPF do servidor (identificador único)"
@@ -25,10 +25,10 @@ models:
     tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
-          combination_of_columns:
-          - hash_cpf
-          - mes_competencia
-          - id_vinculo
+            combination_of_columns:
+            - hash_cpf
+            - mes_competencia
+            - id_vinculo
     columns:
       - name: hash_cpf
         description: "CPF do servidor (identificador único)"
@@ -36,5 +36,24 @@ models:
           - not_null
 
       - name: nome_servidor
+        tests:
+          - not_null
+  
+  - name: stg_siape_remuneracao
+    description: "Tabela de remuneração dos servidores SIAPE com dados limpos e padronizados"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - hash_cpf
+              - mes_referencia
+              - id_vinculo
+    
+    columns:
+      - name: hash_cpf
+        description: "CPF do servidor (identificador único)"
+        tests:
+          - not_null
+      - name: remuneracao_bruta
         tests:
           - not_null

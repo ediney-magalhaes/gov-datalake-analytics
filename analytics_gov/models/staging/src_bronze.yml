@@ -12,3 +12,5 @@ sources:
         description: "Dados de aposentados e pensionistas do Poder Executivo."
       - name: enap_ingestao_automatica
         description: "Dados massivos de capacitação e cursos da Escola Virtual Gov (ENAP)."
+      - name: remuneracao_ingestao_automatica
+        description: "Dados de remuneração dos servidores do Poder Executivo."

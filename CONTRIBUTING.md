@@ -54,3 +54,4 @@ Antes de considerar uma entrega concluída ou abrir um Pull Request, o desenvolv
 - [ ] **Os testes de qualidade do dbt (`dbt test`) foram executados e aprovados.**
 - [ ] **A documentação do modelo (dicionário de dados) foi atualizada no arquivo `schema.yml`.**
 - [ ] As mensagens de commit seguem o padrão *Conventional Commits*.
+- [ ] dbt docs generate executado (quando alterar models/schema.yml)

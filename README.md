@@ -28,7 +28,7 @@ A arquitetura Cloud Native desenvolvida com processamento exclusivo em memória 
 
 - **Volume Processado:** ~11,5 milhões de registros (SIAPE Ativos + SIAPE Aposentados + ENAP + SIAPE Remuneração).
 - **Tempo Médio de Ingestão:** ~6,4 minutos (Fluxo completo Origem para BigQuery).
-- **Throughput Máximo:** 14.360 linhas por segundo (incluindo descompactação, limpeza de schema e SHA-256).
+- **Throughput:** Pico de ~14.360 linhas/segundo durante a etapa de carga (load) no BigQuery (a média do job varia conforme I/O da fonte).
 - **Consumo de Disco Local:** 0 bytes (Processamento 100% in-memory via io.BytesIO).
 - **Resiliência de Rede:** Implementação de estratégias de Rate Limiting (pausas estruturadas) e Headers customizados para mitigação de erros 403 (Forbidden) em servidores governamentais.
 
@@ -93,6 +93,12 @@ export GOOGLE_APPLICATION_CREDENTIALS="caminho/para/sua-chave.json"
 ### 3. Execução da Ingestão
 ```bash
 python fase_2/14_ingestao_remuneracao_bronze.py
+```
+
+### 4. Para gerar e visualizar o dicionário de dados e a linhagem:
+```bash
+dbt docs generate
+dbt docs serve
 ```
 
 ---

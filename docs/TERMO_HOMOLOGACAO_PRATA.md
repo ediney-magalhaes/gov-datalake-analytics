@@ -22,8 +22,9 @@ As transformações foram implementadas utilizando dbt Core, seguindo princípio
 
 | Tabela Origem (Bronze) | Modelo dbt (Prata) | Status |
 |:--- |:--- |:--- |
-| `remuneracao_ingestao_automatica` | `stg_siape_ativos` | Homologado |
+| `ativos_ingestao_automatica` | `stg_siape_ativos` | Homologado |
 | `aposentados_ingestao_automatica` | `stg_siape_aposentados` | Homologado |
+| `remuneracao_ingestao_automatica` | `stg_siape_remuneracao` | Homologado |
 | `capacitacao_enap_bronze` | `stg_enap_capacitacao` | Homologado |
 
 ---
@@ -52,7 +53,7 @@ Monitoramento de campos mandatórios. Conforme logs de auditoria, os testes iden
 
 ## 5. Resultado da Suíte de Testes
 
-- **Total de Testes Definidos:** 5 (incluindo testes de unicidade e integridade).
+- **Total de Testes Definidos:** 12 (incluindo unicidade, integridade relacional e valores não-nulos).
 - **Status de Execução:** Pass.
 - **Observação:** As falhas de integridade detectadas na fonte primária foram mitigadas, não comprometendo a qualidade da Camada Prata resultante.
 
