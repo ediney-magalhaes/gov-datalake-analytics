@@ -85,3 +85,42 @@ A integridade dos dados na Camada Prata é validada via dbt test e tratada no pr
 - **Analytics as Code:** Todas as transformações são versionadas via Git.
 - **Linhagem:** O fluxo Fonte -> Bronze -> Prata é documentado automaticamente via dbt docs.
 - **Auditoria:** Logs de performance e volumetria são gerados a cada ciclo de ingestão e transformação.
+
+---
+
+# Camada Ouro — Data Marts (Consolidação Analítica)
+
+As tabelas da Camada Ouro representam a entrega de valor para o usuário final (Power BI) e respondem aos blocos temáticos do Edital. Nesta camada, os dados da Prata são cruzados, enriquecidos e traduzidos para regras de negócio estabelecidas.
+
+## 1. Blocos 1 e 2: Dinâmicas da Força de Trabalho e Diversidade, Inclusão e Equidade (`mart_servidores_remuneracao`)
+- **Descrição**: Tabela analítica (***One Big Table***) que consolida os dados demográficos (raça, sexo, idade), funcionais (cargo, órgão, UF) e financeiros (remuneração bruta e líquida) dos servidores ativos do Executivo Federal.
+- **Granularidade**: 1 linha por servidor, por vínculo, por mês de competência.
+- **Estratégia FinOps**: Materializada fisicamente como `table` no BigQuery, reduzindo drasticamente o custo de processamento ao evitar o recálculo diário de milhões de linhas durante o consumo pelos painéis de BI.
+
+**Mapeamento e Regras de Negócio (Transformações Ouro)**
+| Coluna Ouro | Regra de Transformação Aplicada |
+| :--- | :--- |
+| raca_cor e sexo | Colunas demográficas importadas da base de cadastro para viabilizar os indicadores do **Bloco 2 (Diversidade e Inclusão)**. |
+| `cargo` e `uf_exercicio` | Colunas funcionais importadas da base de cadastro para viabilizar os indicadores do **Bloco 1 (Dinâmicas da Força de Trabalho)**. |
+| `remuneracao_bruta` e `liquida` | Valores financeiros unificados via `LEFT JOIN` utilizando uma chave de cruzamento tripla (CPF + Vínculo + Mês). |
+
+**Regras de Qualidade e Contrato de Dados (dbt tests)**
+Para assegurar que o Governo não tome decisões baseadas em dados financeiros duplicados ou inconsistentes, esta tabela possui as seguintes travas de auditoria:
+- **Integridade Relacional**: A chave de cruzamento primária (`hash_cpf`) possui teste de not_null.
+- **Unicidade Complexa (Prevenção de Duplicidade)**: Implementação do teste `unique_combination_of_columns` (pacote ***dbt_utils***) sobre a tríade `[hash_cpf, id_vinculo, mes_competencia]`. Isso garante matematicamente que nenhum servidor apareça recebendo dois salários no mesmo vínculo e no mesmo mês de referência.
+
+## 2. Bloco 3: Competências e Alinhamento Estratégico (`mart_servidores_capacitacao`)
+- **Descrição**: Tabela analítica consolidada cruzando o perfil demográfico e funcional dos servidores ativos (SIAPE) com seu histórico de capacitações (ENAP).
+- **Granularidade**: 1 linha por matrícula de curso por servidor.
+- **Estratégia FinOps**: Materializada fisicamente como table no BigQuery para otimização de performance e redução de custos de leitura (Data Warehouse colunar) durante o consumo pelo painel de BI.
+
+**Mapeamento e Regras de Negócio (Transformações Ouro)**
+| Coluna Ouro | Regra de Transformação Aplicada |
+| :--- | :--- |
+| `tematica_curso` | Tratamento de valores vazios da origem via função `COALESCE`, imputando o valor padrão **'Não Informado'**. |
+| `situacao_matricula` | Padronização semântica via `CASE WHEN` para agrupar as diversas nomenclaturas da fonte em 4 categorias oficiais de negócio: **'Concluído'** (Concluida), **'Evadido'** (Desistente, Trancada, Não Concluído, Reprovado) e **'Não Informado'**. |
+
+**Regras de Qualidade e Contrato de Dados (dbt tests)**
+Para garantir a consistência e rastreabilidade exigidas no Produto 4, a tabela Ouro possui os seguintes bloqueios de auditoria automatizados:
+- **Integridade Relacional**: A chave de cruzamento `hash_cpf` e a coluna `tematica_curso` possuem testes de `not_null`.
+- **Governança de Domínio**: A coluna `situacao_matricula` possui um teste estrito de `accepted_values`, garantindo que o banco de dados rejeite qualquer atualização que traga status fora do padrão acordado ('Concluído', 'Em andamento', 'Evadido', 'Não Informado').

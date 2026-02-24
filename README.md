@@ -34,14 +34,15 @@ A arquitetura Cloud Native desenvolvida com processamento exclusivo em memória 
 
 ---
 
-## Qualidade de Dados e Governança (Fase 3)
+## Qualidade de Dados e Governança (Fases 3 e 4)
 
-A confiabilidade dos dados é monitorada por testes automatizados via dbt Core, permitindo uma transição segura entre as camadas Bronze e Prata:
+A confiabilidade dos dados é monitorada por testes automatizados via dbt Core, garantindo uma transição segura entre as camadas Bronze, Prata e Ouro:
 
-- **Observabilidade de Nulos:** Os testes de `not_null` identificaram inconsistências em campos de vínculo e localização nas fontes primárias. Essas ocorrências foram tratadas na Camada Prata via regras de limpeza e imputação de valores padrão.
-- **Auditoria de Unicidade:** Implementação de testes de chave composta para detectar e neutralizar registros duplicados provenientes das extrações mensais.
-- **Normalização de Schema:** Uso de Expressões Regulares (Regex Whitelisting) no pipeline de ingestão para garantir que 100% dos nomes de colunas estejam em conformidade com os padrões SQL do BigQuery.
-- **Linhagem de Dados:** Documentação técnica gerada via `dbt docs`, permitindo o rastreamento completo desde a origem até o modelo final.
+- **Contratos de Dados (Camada Ouro):** Implementação de testes restritos (como `accepted_values`) para garantir a padronização semântica das regras de negócio (ex: status de matrícula) e bloquear sujeiras da origem.
+- **Observabilidade de Nulos:** Testes de `not_null` identificaram inconsistências nas fontes primárias (ex: temas de cursos ou campos de vínculo vazios). Essas ocorrências foram tratadas via regras de limpeza e imputação (uso de `COALESCE`).
+- **Auditoria de Unicidade Complexa:** Implementação de testes de chave composta (`unique_combination_of_columns`) para garantir integridade matemática e evitar duplicação em tabelas de cruzamento financeiro e demográfico.
+- **Normalização de Schema:** Uso de Expressões Regulares (Regex Whitelisting) no pipeline de ingestão para conformidade com os padrões SQL do BigQuery.
+- **Linhagem de Dados:** Documentação técnica gerada via `dbt docs`, permitindo o rastreamento visual completo desde a origem até o modelo final de consumo.
 
 ---
 
@@ -51,8 +52,8 @@ A confiabilidade dos dados é monitorada por testes automatizados via dbt Core, 
 |------|------------|--------|------------|
 | Fase 1 (Local) | Docker + PostgreSQL + Python | Concluída | Ingestão inicial e diagnóstico de fontes. |
 | Fase 2 (Cloud - Bronze) | BigQuery + Python | Concluída | Ingestão automatizada, Hash LGPD e Logs de Auditoria. |
-| Fase 3 (Cloud - Prata) | BigQuery + dbt Core | Em andamento | Modelagem Staging, Tipagem Estrita e Testes de Qualidade (SIAPE Remuneração em fase de mapeamento). |
-| Fase 4 (Cloud - Ouro) | BigQuery + dbt Core | Planejada | Wide Table Analítica e Agregações Estratégicas. |
+| Fase 3 (Cloud - Prata) | BigQuery + dbt Core | Concluída | Modelagem Staging, Tipagem Estrita e Testes de Qualidade. |
+| Fase 4 (Cloud - Ouro) | BigQuery + dbt Core | Concluída | Data Marts (Blocos 1, 2 e 3 do Edital), materialização FinOps e contratos de dados. |
 
 ---
 
