@@ -15,3 +15,20 @@ models:
         description: "CPF do servidor"
         tests:
           - not_null
+  - name: "mart_servidores_capacitacao"
+    description: "Tabela de capacitacao dos servidores ativos"
+    columns:
+      - name: hash_cpf
+        description: "CPF do servidor"
+        tests:
+          - not_null
+      - name: tematica_curso
+        description: "Tema do curso"
+        tests:
+          - not_null
+      - name: situacao_matricula
+        description: "Status da matricula nos cursos"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Concluído', 'Em andamento', 'Evadido', 'Não Informado']

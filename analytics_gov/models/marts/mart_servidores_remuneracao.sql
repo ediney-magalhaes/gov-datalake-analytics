@@ -1,3 +1,8 @@
+{{ config(
+    materialized='table',
+    alias='mart_servidores_remuneracao'
+) }}
+
 WITH ativos AS (
     SELECT * FROM {{ref('stg_siape_ativos')}}
 ),
