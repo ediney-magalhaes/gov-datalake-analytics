@@ -71,14 +71,14 @@ models/
 │
 └── marts/                             # Camada Ouro (Regras de Negócio e BI)
     ├── _marts__models.yml             # Contratos, testes e dicionário (Ouro)
-    └── mart_servidores_remuneracao.sql # OBT Consolidada (Ativos + Folha)
+    ├── mart_servidores_remuneracao.sql # OBT Consolidada (Ativos + Folha)
+    └── mart_servidores_capacitacao.sql # OBT Consolidada (Ativos + Cursos ENAP)
 ```
 
 ---
 
 ## Status e Próximos Passos
 - [x] **Produto 3**: Camada Prata estruturada e testada (SIAPE e ENAP).
-
 - [x] **Produto 4 (Blocos 1 e 2)**: Criação da OBT cruzando Servidores e Remuneração para análise de equidade e dinâmica da força de trabalho.
-
-- [ ] **Produto 4 (Bloco 3)**: Desenvolvimento do Data Mart cruzando dados de RH com a base da ENAP para análise de competências e capacitação contínua.
+- [x] **Produto 4 (Bloco 3)**: Desenvolvimento do Data Mart cruzando dados de RH com a base da ENAP para análise de competências e capacitação contínua.
+- [ ] **Integração Contínua (CI/CD)**: Configurar GitHub Actions para execução automatizada de testes e build da documentação a cada Push na branch principal.

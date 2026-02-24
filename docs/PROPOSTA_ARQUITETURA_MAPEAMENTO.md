@@ -48,13 +48,18 @@ Execução sistemática de dbt tests (Unique, Not Null, Accepted Values) em cada
 
 ## 4. Camada Ouro — Consumo e Otimização (FinOps)
 
-Modelo otimizado para alta performance analítica no Google BigQuery.
+Modelo totalmente implementado e otimizado para alta performance analítica no Google BigQuery, atendendo aos blocos temáticos do Produto 4 do Edital.
 
-### Estratégia Colunar:
-- Adoção de OBT (One Big Table) para reduzir a complexidade e o custo de JOINs em grandes volumes.
-- Particionamento Físico: PARTITION BY mes_referencia para otimização de scans (Partition Pruning).
-- Agrupamento (Clustering): CLUSTER BY orgao, uf, hash_cpf para acelerar filtros de busca.
-- Na Camada Ouro (OBT), a materialização padrão planejada é incremental com estratégia insert_overwrite particionada por mes_referencia. Motivo: FinOps (redução de custo de scan no BigQuery) e idempotência.
+### Estratégia de Modelagem e Integração:
+- **OBT (One Big Table):** Adoção de tabelas analíticas consolidadas para reduzir a complexidade e o custo de JOINs no Power BI.
+- **Integração Multi-fontes:** Cruzamento validado entre as bases do SIAPE e ENAP, garantido por chaves criptografadas unificadas (`hash_cpf`).
+
+### Estratégia Colunar e FinOps:
+- **Materialização Física:** As tabelas finais (*Data Marts*) foram materializadas fisicamente como `table` via dbt. Isso garante alta performance de leitura e previsibilidade de custos na nuvem, evitando o recálculo a cada consulta.
+- **Particionamento e Clustering (Planejado para escala):** Adoção de `PARTITION BY mes_referencia` para otimização de scans (Partition Pruning) e `CLUSTER BY orgao, uf, hash_cpf` para acelerar filtros de busca.
+
+### Governança e Qualidade:
+- Contratos de dados e auditoria de qualidade (dbt tests) são aplicados no momento da transformação final, bloqueando inconsistências (ex: status fora do padrão ou nulos não tratados) antes da disponibilização no Data Lake.
 
 ---
 
