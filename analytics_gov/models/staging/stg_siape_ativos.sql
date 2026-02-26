@@ -20,3 +20,22 @@ renamed AS (
     FROM source
 )
 SELECT * FROM renamed WHERE linha_numero = 1
+
+/*
+=============================================================================
+BACKLOG DE REFATORAÇÃO (FASE 5) - PREPARAÇÃO PARA ESTUDOS PNUD (EDITAIS 1 e 2)
+=============================================================================
+Ação Pendente: 
+1. Adicionar as seguintes colunas da Bronze neste modelo Staging para habilitar 
+   as análises de coorte (sobrevivência/Kaplan-Meier):
+   - DATA_INGRESSO_CARGOFUNCAO -> cast(para DATE) as data_ingresso_cargo
+   - DATA_INGRESSO_ORGAO -> cast(para DATE) as data_ingresso_orgao
+   - DATA_DIPLOMA_INGRESSO_SERVICOPUBLICO -> cast(para DATE) as data_ingresso_servico_publico
+
+2. Adicionar as colunas acima na tabela 'mart_servidores_remuneracao'.
+
+3. Levantamento de Gap: A variável 'Escolaridade' exigida para o Estudo de 
+   Desigualdades não está presente nesta fonte (SIAPE Ativos). Requer nova 
+   pipeline de ingestão (SIAPEcad/SouGov).
+=============================================================================
+*/
