@@ -7,6 +7,11 @@ service_account.json
 .env
 .venv/
 
+# Arquivos de Dados e Bancos Locais (Governança e LGPD)
+*.parquet
+*.duckdb
+*.log
+
 # Python e Sistema
 __pycache__/
 .DS_Store
