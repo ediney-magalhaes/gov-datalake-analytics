@@ -26,6 +26,8 @@ Durante o desenvolvimento da Camada Bronze, identificamos inconsistências crít
 - **Bloqueio de Firewall (Status 403):** Servidores governamentais aplicam políticas de segurança rigorosas que bloqueiam requisições automatizadas padrão.
 - **Falta de Padronização de Compactação:** O uso de diferentes algoritmos (.zip vs .tar.gz) exigiu uma arquitetura de extração polimórfica capaz de lidar com múltiplos formatos diretamente em memória RAM (io.BytesIO).
 - **Risco de Gargalo de Memória (OOM):** A volumetria combinada de ~11,5 milhões de registros exige destruição explícita de instâncias de DataFrames (del df) após cada carregamento para manter a estabilidade do pipeline.
+- **Risco de Gargalo de Memória (OOM):** A volumetria combinada exige gestão eficiente de RAM. Resolvido na Fase 3 com a substituição do Pandas pelo motor **Polars** (Apache Arrow), permitindo processamento vetorizado massivo sem esgotamento de recursos local/nuvem.
+- **Gap Analysis - Variável "Escolaridade":** Durante a auditoria exploratória in-memory dos microdados do Portal da Transparência, homologamos a **ausência da variável "Escolaridade"** para servidores ativos. Este gap bloqueia os estudos de trajetórias e desigualdades. Justifica-se, portanto, a implementação de pipelines via API restrita (SIAPEcad/SouGov).
 
 ---
 
@@ -46,6 +48,7 @@ O tratamento de dados pessoais sensíveis (Lei nº 13.709/2018) é centralizado 
 | **Bloqueio de Acesso (403)** | Emulação de User-Agent e implementação de Rate Limiting (Pausas estruturadas). |
 | **Integridade de Dados** | Implementação de testes automatizados de unicidade e nulidade via dbt Core. |
 | **Segurança LGPD** | Criptografia determinística SHA-256 antes da persistência no BigQuery. |
+|**Ausência de Escolaridade** | Desenvolvimento de novo conector via framework dlt focado em APIs estruturantes. |
 
 ---
 

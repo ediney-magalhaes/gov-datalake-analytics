@@ -20,6 +20,13 @@ Este documento integra o Produto 1 — Descoberta e Mapeamento Técnico (As-Is).
 - **Granularidade:** 1 linha por servidor ativo por mês de competência.
 - **Método de Ingestão:** Requisição HTTP com headers customizados, descompactação em memória (io.BytesIO) e micro-batching mensal.
 
+### Atualização de Governança e LGPD (Fase 3)
+
+Para adequação rigorosa à LGPD e para garantir a auditoria de *Record Linkage* (Edital 3), as seguintes regras de negócio foram aplicadas na Camada Bronze durante a ingestão in-memory:
+
+* **`Id_SERVIDOR_PORTAL`**: Definida como a **Chave Primária Oficial** de cruzamento (Record Linkage) para integrações com bases externas do Ministério, garantindo rastreabilidade sem exposição de dados sensíveis.
+* **`CPF`**: O dado bruto (que já vinha mascarado da origem como `***.123.456-**`) sofre processo automatizado de **Pseudonimização via Hashing Determinístico (SHA-256)** usando a biblioteca nativa `hashlib` no motor *Polars*, antes da persistência no disco. O formato final da coluna no Data Lake é um código alfanumérico irreversível.
+* **`Escolaridade`**: Homologado via *Gap Analysis* que a variável **NÃO EXISTE** nos microdados públicos do Portal da Transparência (apenas no SIAPEcad/SouGov via API restrita).
 
 ---
 

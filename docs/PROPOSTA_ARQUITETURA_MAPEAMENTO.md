@@ -16,19 +16,18 @@ A solução adota o paradigma Medallion Architecture (Bronze -> Prata -> Ouro), 
 
 ---
 
-## 2. Camada Bronze — Ingestão e Resiliência
+## 2. Camada Bronze — Ingestão e Resiliência (Modern Data Stack)
 
-Responsável pela captura fiel dos dados da origem, preservando a rastreabilidade histórica sem persistência local intermediária.
+Responsável pela captura fiel dos dados da origem, preservando a rastreabilidade histórica e criando um backup físico e imutável no Data Lake.
 
 ### Características Técnicas:
-- Extração via APIs públicas governamentais com tratamento de persistência em memória (io.BytesIO).
-- Descompactação múltipla (ZIP, TAR.GZ, GZIP) em tempo de execução.
-- Normalização de Schema (Whitelisting): Aplicação de Expressões Regulares (Regex) para garantir que 100% dos nomes de colunas sejam compatíveis com o padrão ANSI SQL.
-- Mitigação de Bloqueios: Implementação de Rate Limiting e Headers customizados (User-Agent) para garantir a estabilidade das requisições junto aos servidores governamentais.
+- **Motores de Extração Híbridos:** Uso do motor **Polars** (Apache Arrow) para processamento vetorizado in-memory de arquivos massivos (ZIP/CSV), e do framework **dlt (Data Load Tool)** para extração automatizada, resiliente e paginada de APIs governamentais complexas.
+- **Persistência Física (Data Lake):** O pipeline não envia dados brutos direto para o Data Warehouse. O dado pousa primeiramente em Cloud Storage (ou sistema de arquivos local) no formato colunar **Parquet**, garantindo alta compressão (~80%) e backup histórico imutável.
+- **Normalização de Schema:** Aplicação de Expressões Regulares (Regex) in-flight para garantir que 100% dos nomes de colunas sejam compatíveis com o padrão ANSI SQL.
+- **Governança Operacional e Resiliência:** Rastreabilidade ponta a ponta garantida por **Dual Logging** (Terminal + arquivo físico `.log`) via biblioteca nativa `logging`, atendendo aos requisitos estritos de auditoria. Falhas no firewall do Governo são mitigadas com tratamento de exceções (`try...except`) e *Graceful Degradation*.
 
 ### Segurança (LGPD):
-- Pseudonimização determinística (SHA-256) aplicada in-flight.
-- Criptografia de dados sensíveis antes da persistência em nuvem.
+- Pseudonimização determinística (SHA-256 via `hashlib`) aplicada in-flight no CPF, antes do dado tocar o disco em formato Parquet.
 
 ---
 
@@ -78,13 +77,12 @@ A arquitetura prevê a implementação de integração e entrega contínua via G
 
 ---
 
-## 6. Matriz de Riscos Técnicos e Mitigações
-
 | Risco Técnico | Impacto | Mitigação Implementada |
 |:--- |:--- |:--- |
-| Bloqueio por Rate Limit (Erro 403) | Alto | Pausas estruturadas (time.sleep) e headers simulando navegadores reais. |
+| Bloqueio por Rate Limit (Erro 403) | Alto | Pausas estruturadas e headers simulando navegadores reais. |
 | Inconsistência de nomes de colunas | Médio | Filtro de Regex (Whitelist) permitindo apenas caracteres alfanuméricos e _. |
-| Estouro de Memória (OOM) | Alto | Processamento iterativo (micro-batching) e limpeza manual de cache (del df). |
+| Estouro de Memória (OOM) | Alto | Substituição do Pandas pelo motor vetorizado Polars (escrito em Rust/Apache Arrow), triturando gigabytes sem esgotar a RAM local. |
+| Instabilidade de APIs Governamentais | Alto | Uso do framework `dlt` combinado com blocos `try...except` para captura de erros de rede (Timeouts) e *Graceful Degradation* (entrega de listas vazias em vez de quebrar o pipeline). |
 | Duplicidade de registros | Médio | Chave composta e testes de unicidade automatizados no dbt. |
 | Custo excessivo de processamento | Médio | Estratégias de particionamento e agrupamento físico no BigQuery. |
 

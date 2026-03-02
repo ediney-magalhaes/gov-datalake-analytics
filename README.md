@@ -2,23 +2,23 @@
 
 Projeto técnico de Arquitetura de Dados em Cloud para ingestão, tratamento e disponibilização de dados públicos do Governo Federal (folha de pagamento, aposentadorias e capacitação do executivo federal).
 
-[cite_start]O projeto como um todo abrangerá o desenvolvimento de processos de governança e de infraestrutura digital pública que garantam a interoperabilidade, a atualização contínua e o uso analítico das informações, no âmbito da Secretaria Extraordinária para a Transformação do Estado (SETE) e da Secretaria de Gestão de Pessoas (SGP), vinculada ao Projeto BRA/21/011 – Fortalecimento de Capacidades para Modernização e Aprimoramento da Gestão Estatal da União. [cite: 36]
+O projeto como um todo abrangerá o desenvolvimento de processos de governança e de infraestrutura digital pública que garantam a interoperabilidade, a atualização contínua e o uso analítico das informações, no âmbito da Secretaria Extraordinária para a Transformação do Estado (SETE) e da Secretaria de Gestão de Pessoas (SGP), vinculada ao Projeto BRA/21/011 – Fortalecimento de Capacidades para Modernização e Aprimoramento da Gestão Estatal da União.
 
 ---
 
 ## Contexto e Desafio de Negócio
 
-O Poder Executivo Federal gera diariamente uma vasta quantidade de dados sobre a gestão de seus servidores. [cite_start]Historicamente, essas informações encontram-se dispersas em múltiplos sistemas (SIAPE, SouGov, SIAPEcad, SIGEPE, entre outros), com estruturas heterogêneas e limitada interoperabilidade, o que dificulta análises consistentes e o uso em tempo real para subsidiar decisões. [cite: 40]
+O Poder Executivo Federal gera diariamente uma vasta quantidade de dados sobre a gestão de seus servidores. Historicamente, essas informações encontram-se dispersas em múltiplos sistemas (SIAPE, SouGov, SIAPEcad, SIGEPE, entre outros), com estruturas heterogêneas e limitada interoperabilidade, o que dificulta análises consistentes e o uso em tempo real para subsidiar decisões.
 
 ### O Problema
-[cite_start]A extração manual ou semiautomatizada dessas bases fragmentadas compromete a agilidade, confiabilidade e abrangência das análises, ressaltando a necessidade de desenvolvimento de soluções integradas, automatizadas e seguras, que promovam a unificação das bases de dados e facilitem a governança da informação no âmbito do governo federal. [cite: 41, 42]
+A extração manual ou semiautomatizada dessas bases fragmentadas compromete a agilidade, confiabilidade e abrangência das análises, ressaltando a necessidade de desenvolvimento de soluções integradas, automatizadas e seguras, que promovam a unificação das bases de dados e facilitem a governança da informação no âmbito do governo federal.
 
 ### A Solução
-[cite_start]Em alinhamento com a Estratégia Federal de Governo Digital (Portaria SGD/MGI nº 6.618/2024), este projeto constrói uma infraestrutura digital pública unificada. [cite: 43] [cite_start]Adotando princípios inspirados na arquitetura medallion (camadas bronze, silver e gold), que organiza os dados em níveis crescentes de qualidade e tratamento: desde a ingestão bruta e imutável (bronze), passando por estruturas refinadas e confiáveis para análise (silver), até vistas analíticas consolidadas voltadas à tomada de decisão (gold). [cite: 55]
+Em alinhamento com a Estratégia Federal de Governo Digital (Portaria SGD/MGI nº 6.618/2024), este projeto constrói uma infraestrutura digital pública unificada. Adotando princípios inspirados na arquitetura medallion (camadas bronze, silver e gold), que organiza os dados em níveis crescentes de qualidade e tratamento: desde a ingestão bruta e imutável (bronze), passando por estruturas refinadas e confiáveis para análise (silver), até vistas analíticas consolidadas voltadas à tomada de decisão (gold).
 
 O pipeline desenvolvido foca em resiliência e segurança:
 - Automatiza a coleta de dados de múltiplas fontes oficiais (APIs paginadas e arquivos massivos).
-- [cite_start]Cada etapa do pipeline deverá incorporar mecanismos automatizados de anonimização ou pseudonimização de dados pessoais sensíveis, em conformidade com a Lei Geral de Proteção de Dados Pessoais (LGPD), integrando esses procedimentos diretamente aos processos de ingestão e transformação. [cite: 56]
+- Cada etapa do pipeline incorpora mecanismos automatizados de anonimização ou pseudonimização de dados pessoais sensíveis, em conformidade com a LGPD, integrando esses procedimentos diretamente aos processos de ingestão e transformação.
 - Entrega bases consolidadas para subsidiar análises preditivas, estudos de trajetórias funcionais, diversidade e mapeamento de competências.
 
 ---
@@ -27,12 +27,11 @@ O pipeline desenvolvido foca em resiliência e segurança:
 
 Para garantir a escalabilidade exigida e a aprovação em auditorias de conformidade, a arquitetura de ingestão (Camada Bronze) foi reestruturada adotando o padrão *Modern Data Stack*:
 
-* **Processamento em Memória (Otimizado):** Substituição do Pandas pelo **Polars**. O processamento vetorizado (baseado em Apache Arrow) evita erros de falta de memória (OOM) ao descompactar e ler dezenas de gigabytes de arquivos ZIP governamentais.
-* **Framework de Extração (APIs):** Adoção do **dlt (Data Load Tool)** para automatizar, paralelizar e padronizar as requisições em APIs complexas e paginadas (como SIAPEcad e SouGov).
-* **Armazenamento Colunar:** Transição de arquivos temporários na RAM para persistência física no formato **Parquet**. Isso garante alta compressão (redução de ~80% no tamanho) e atua como backup imutável da Camada Bronze em Cloud Storage.
-* **Segurança In-Flight (LGPD):** Implementação de Hashing Determinístico (SHA-256) na coluna CPF utilizando a biblioteca nativa `hashlib` durante o processamento no Polars, antes da persistência no disco.
-* [cite_start]**Governança Operacional:** O consultor também será responsável por garantir o controle de qualidade e resiliência operacional, assegurando que os dados entregues atendam aos requisitos de confiabilidade, rastreabilidade e consistência. [cite: 57] Para isso, implementou-se o **Dual Logging** (Terminal + `.log` local via biblioteca nativa `logging`), registrando a saúde, latência e metadados de cada extração.
-
+* **Processamento em Memória (Otimizado):** Substituição do Pandas pelo **Polars**. O processamento vetorizado evita erros de falta de memória (OOM) ao descompactar e ler dezenas de gigabytes de arquivos ZIP governamentais.
+* **Framework de Extração (APIs):** Adoção do **dlt (Data Load Tool)** para automatizar, paralelizar e padronizar as requisições em APIs complexas (como SIAPEcad e SouGov). Implementação de resiliência de rede (Graceful Degradation) com blocos `try...except` para suportar instabilidades nos firewalls do Governo (Serpro).
+* **Armazenamento Colunar (Data Lake):** Transição de bancos locais/memória para persistência física no formato **Parquet** via destino `filesystem` nativo do dlt. Isso garante alta compressão e atua como backup imutável da Camada Bronze, pronto para migração Cloud (Google Cloud Storage / AWS S3).
+* **Segurança In-Flight (LGPD):** Implementação de Hashing Determinístico (SHA-256) na coluna CPF utilizando a biblioteca nativa `hashlib` durante o processamento in-memory, antes da persistência no disco.
+* **Governança Operacional:** Implementação de **Dual Logging** (Terminal + `.log` local via biblioteca nativa `logging`), registrando a saúde, latência e falhas de cada extração, provendo total rastreabil
 ---
 
 ## Qualidade de Dados e Governança (Fases 1 e 2 - Legado do dbt)
@@ -107,6 +106,8 @@ dbt docs serve
 ```
 
 **Ediney Magalhães**
-  Engenharia de Dados e Analytics
-  Arquitetura de Dados em Nuvem
+
+Engenharia de Dados e Analytics
+/Arquitetura de Dados em Nuvem
+
 ---
