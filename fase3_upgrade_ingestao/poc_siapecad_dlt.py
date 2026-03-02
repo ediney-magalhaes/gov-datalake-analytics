@@ -2,6 +2,7 @@ import dlt
 import requests
 import logging
 import sys
+import os
 
 #preparação do formatador do arquivo de log
 formatador = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -23,20 +24,28 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger().addHandler(arquivo_log)
 logging.getLogger().addHandler(tela_log)
 
+#destino
+bucket_url = 'file:' + os.path.abspath('data_lake_local')
+destino = dlt.destinations.filesystem(bucket_url)
+
 #construindo pipeline de destino do dado
-pipeline_siapecad = dlt.pipeline(pipeline_name='siapecad' , destination='duckdb' , dataset_name='bronze_siapecad' )
+pipeline_siapecad = dlt.pipeline(pipeline_name='siapecad' , destination= destino , dataset_name='bronze_siapecad' )
 
 #conectando a base de dados
 @dlt.resource
 def conectar_api_siapecad():
-    url_api = 'https://api.servidor.gov.br/siapecad/v1/servidores'
+    url_api = 'https://apigateway.conectagov.estaleiro.serpro.gov.br/api-consulta-siape/v1/consulta-siape'
     
     cabecalhos = {'Authorization': 'Bearer CHAVE_API'}
 
-    resposta = requests.get(url_api, headers= cabecalhos, verify=False)
-    
-    yield resposta.json()
+    try:
+        resposta = requests.get(url_api, headers= cabecalhos, verify=False, timeout=10)
+        resposta.raise_for_status()
+        yield resposta.json()
+    except requests.exceptions.RequestException as erro:
+        logging.error(f'O tempo de conexão falhou: {erro}')
+        yield []
 
 #executando pipeline
-info_carga = pipeline_siapecad.run(conectar_api_siapecad())
+info_carga = pipeline_siapecad.run(conectar_api_siapecad(), loader_file_format='parquet')
 logging.info(f'Execução dlt finalizada {info_carga}')
