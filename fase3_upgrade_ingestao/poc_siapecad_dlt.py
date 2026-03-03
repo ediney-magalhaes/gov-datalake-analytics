@@ -26,13 +26,13 @@ logging.getLogger().addHandler(tela_log)
 
 #destino
 bucket_url = 'file:' + os.path.abspath('data_lake_local')
-destino = dlt.destinations.filesystem(bucket_url)
+destino = dlt.destinations.filesystem(bucket_url, layout="{table_name}/year=2026/month=03/{load_id}")
 
 #construindo pipeline de destino do dado
 pipeline_siapecad = dlt.pipeline(pipeline_name='siapecad' , destination= destino , dataset_name='bronze_siapecad' )
 
 #conectando a base de dados
-@dlt.resource
+@dlt.resource(write_disposition='replace')
 def conectar_api_siapecad():
     url_api = 'https://apigateway.conectagov.estaleiro.serpro.gov.br/api-consulta-siape/v1/consulta-siape'
     
