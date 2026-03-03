@@ -6,6 +6,7 @@
 service_account.json
 .env
 .venv/
+data_lake_local/
 
 # Arquivos de Dados e Bancos Locais (Governança e LGPD)
 *.parquet
