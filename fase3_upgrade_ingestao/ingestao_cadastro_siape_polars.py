@@ -5,6 +5,11 @@ import polars as pl
 import logging
 import sys
 import hashlib
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+salt = os.getenv('HASH_SALT')
 
 #preparação do formatador do arquivo de log
 formatador = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -48,12 +53,19 @@ with zipfile.ZipFile(arquivo_zip) as z:
 
     #sobrescrevendo a coluna de CPF aplicando SHA-256
     df_cadastro = df_cadastro.with_columns(
-        pl.col('CPF').map_elements(lambda x: hashlib.sha256(str(x).encode('utf-8')).hexdigest(), return_dtype=pl.String)
+        pl.col('CPF').map_elements(lambda x: hashlib.sha256((str(x)+str(salt)).encode('utf-8')).hexdigest(), return_dtype=pl.String)
     )
     logging.info('Anonimizacao aplicada com sucesso na coluna CPF!')
 
+    #criando caminho da partição
+    caminho_particao = f'data_lake_local/siape_ativos/year={periodo[:4]}/month={periodo[4:]}'
+
+    #criando diretorio
+    os.makedirs(caminho_particao, exist_ok=True)
+
     #salvando o arquivo
-    df_cadastro.write_parquet(f'{periodo}_cadastro_siape_anonimizado.parquet')
+    df_cadastro.write_parquet(f'{caminho_particao}/part-000.parquet')
     logging.info('Arquivo salvo com sucesso!')
 
-print(df_cadastro.head())
+
+#print(df_cadastro.head())
