@@ -23,11 +23,12 @@ Responsável pela captura fiel dos dados da origem, preservando a rastreabilidad
 ### Características Técnicas:
 - **Motores de Extração Híbridos:** Uso do motor **Polars** (Apache Arrow) para processamento vetorizado in-memory de arquivos massivos (ZIP/CSV), e do framework **dlt (Data Load Tool)** para extração automatizada, resiliente e paginada de APIs governamentais complexas.
 - **Persistência Física (Data Lake):** O pipeline não envia dados brutos direto para o Data Warehouse. O dado pousa primeiramente em Cloud Storage (ou sistema de arquivos local) no formato colunar **Parquet**, garantindo alta compressão (~80%) e backup histórico imutável.
+    - A organização física no Data Lake segue o padrão **Hive Partitioning (year=YYYY/month=MM)**, visando otimização de scans (Partition Pruning) e redução drástica de custos no BigQuery (FinOps).
 - **Normalização de Schema:** Aplicação de Expressões Regulares (Regex) in-flight para garantir que 100% dos nomes de colunas sejam compatíveis com o padrão ANSI SQL.
 - **Governança Operacional e Resiliência:** Rastreabilidade ponta a ponta garantida por **Dual Logging** (Terminal + arquivo físico `.log`) via biblioteca nativa `logging`, atendendo aos requisitos estritos de auditoria. Falhas no firewall do Governo são mitigadas com tratamento de exceções (`try...except`) e *Graceful Degradation*.
 
 ### Segurança (LGPD):
-- Pseudonimização determinística (SHA-256 via `hashlib`) aplicada in-flight no CPF, antes do dado tocar o disco em formato Parquet.
+- Pseudonimização determinística (SHA-256) aplicada in-flight no CPF, **utilizando um 'Salt' criptográfico estático (gerenciado via variáveis de ambiente** `.env`) para mitigar riscos de engenharia reversa e ataques de força bruta.
 
 ---
 

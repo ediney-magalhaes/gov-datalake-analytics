@@ -46,6 +46,14 @@ A confiabilidade dos dados é monitorada por testes automatizados via dbt Core, 
 
 ---
 
+## Roadmap Arquitetural
+
+Para garantir a maturidade progressiva da solução (escalabilidade, DataOps e FinOps), o planejamento de evolução das próximas fases (Orquestração com Dagster, CI/CD, Lakehouse) está formalmente registrado.
+
+[Acesse o Roadmap Arquitetural detalhado aqui](docs/ROADMAP_ARQUITETURAL.md)
+
+---
+
 ## Status do Projeto
 
 | Fase | Arquitetura | Status | Entregáveis |
