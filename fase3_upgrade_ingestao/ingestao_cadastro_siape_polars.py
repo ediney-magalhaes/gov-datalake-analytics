@@ -6,6 +6,8 @@ import logging
 import sys
 import hashlib
 import os
+from datetime import datetime
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -53,12 +55,18 @@ with zipfile.ZipFile(arquivo_zip) as z:
 
     #sobrescrevendo a coluna de CPF aplicando SHA-256
     df_cadastro = df_cadastro.with_columns(
-        pl.col('CPF').map_elements(lambda x: hashlib.sha256((str(x)+str(salt)).encode('utf-8')).hexdigest(), return_dtype=pl.String)
+        pl.col('CPF').map_elements(lambda x: hashlib.sha256((str(x)+str(salt)).encode('utf-8')).hexdigest(), return_dtype=pl.String).alias('hash_cpf'),
+        pl.lit('siape_ativos').alias('source_system'),
+        pl.lit(datetime.now().isoformat()).alias('ingestion_timestamp'),
+        pl.lit('v1').alias('schema_version')
     )
+    #excluindo a coluna de CPF por segurança
+    df_cadastro = df_cadastro.drop('CPF')
+
     logging.info('Anonimizacao aplicada com sucesso na coluna CPF!')
 
-    #criando caminho da partição
-    caminho_particao = f'data_lake_local/siape_ativos/year={periodo[:4]}/month={periodo[4:]}'
+    #criando caminho da partição (Bronze Raw)
+    caminho_particao = f'data_lake_local/bronze_raw/siape_ativos/year={periodo[:4]}/month={periodo[4:]}'
 
     #criando diretorio
     os.makedirs(caminho_particao, exist_ok=True)
@@ -66,6 +74,3 @@ with zipfile.ZipFile(arquivo_zip) as z:
     #salvando o arquivo
     df_cadastro.write_parquet(f'{caminho_particao}/part-000.parquet')
     logging.info('Arquivo salvo com sucesso!')
-
-
-#print(df_cadastro.head())
