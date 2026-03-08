@@ -32,17 +32,17 @@ Para garantir a escalabilidade exigida e a aprovação em auditorias de conformi
 * **Armazenamento Colunar (Data Lake):** Transição de bancos locais/memória para persistência física no formato **Parquet** via destino `filesystem` nativo do dlt. Isso garante alta compressão e atua como backup imutável da Camada Bronze, pronto para migração Cloud (Google Cloud Storage / AWS S3).
 * **Segurança In-Flight (LGPD):** Implementação de Hashing Determinístico (SHA-256) na coluna CPF utilizando a biblioteca nativa `hashlib` durante o processamento in-memory, antes da persistência no disco.
 * **Governança Operacional:** Implementação de **Dual Logging** (Terminal + `.log` local via biblioteca nativa `logging`), registrando a saúde, latência e falhas de cada extração, provendo total rastreabil
+* **Orquestrador Centralizado:** Implementação do Padrão *Registry* no script `executar_ingestao.py`. A lógica de ingestão foi desacoplada das configurações, permitindo que novas bases sejam adicionadas apenas via metadados (dicionários), sem alteração no código-fonte dos motores.
 ---
 
-## Qualidade de Dados e Governança (Fases 1 e 2 - Legado do dbt)
+## Qualidade e Integridade na Camada Bronze (In-Flight Quality)
 
-A confiabilidade dos dados é monitorada por testes automatizados via dbt Core, garantindo uma transição segura entre as camadas:
+Diferente do legado, a confiabilidade agora é garantida durante a extração, antes mesmo do dado tocar o disco, através de quatro pilares:
 
-- **Contratos de Dados (Camada Ouro):** Implementação de testes restritos (`accepted_values`) para garantir a padronização semântica.
-- **Observabilidade de Nulos:** Testes de `not_null` identificaram inconsistências nas fontes primárias tratadas via regras de imputação (`COALESCE`).
-- **Auditoria de Unicidade Complexa:** Implementação de testes de chave composta (`unique_combination_of_columns`) para evitar duplicação em tabelas de cruzamento financeiro.
-- **Normalização de Schema:** Uso de Expressões Regulares (Regex) para limpeza de cabeçalhos.
-- **Linhagem de Dados:** Documentação técnica gerada via `dbt docs` para rastreamento completo.
+- **Controle de Tipagem Estrita (Schema Enforcement):** O motor dlt valida o schema da API em tempo real; se a fonte mudar o formato de um campo crítico, o pipeline alerta a inconsistência.
+- **Anonimização Determinística (LGPD):** Implementação de hashing SHA-256 via `hashlib` para CPFs. O dado sensível é transformado em memória, garantindo que o arquivo físico `.parquet` já nasça em conformidade com a LGPD.
+- **Tratamento de Arquivos Corrompidos:** O motor Polars valida a integridade de arquivos `.zip` e `.csv`, abortando a operação em caso de `BadZipFile` para evitar a poluição do Data Lake com lixo digital.
+- **Observabilidade Operacional (Dual Logging):** Registro de saúde da ingestão em tempo real (Terminal + Arquivo `.log`), capturando latência, volume de linhas e erros de rede (HTTP 4xx/5xx).
 
 ---
 
@@ -56,12 +56,12 @@ Para garantir a maturidade progressiva da solução (escalabilidade, DataOps e F
 
 ## Status do Projeto
 
-| Fase | Arquitetura | Status | Entregáveis |
+| Fase | Descrição | Status | Entregáveis |
 |------|------------|--------|------------|
-| Fase 1 e 2 (Legado) | Python (Pandas) + PostgreSQL + BQ | Refatorada | Ingestão inicial, provas de conceito e diagnósticos. |
-| Fase 3 (Upgrade Ingestão) | Polars + dlt + DuckDB + Parquet | Em Execução | Performance in-memory, LGPD automatizada e Dual Logging. |
-| Fase 4 (Cloud - Prata) | BigQuery + dbt Core | Concluída | Modelagem Staging, Tipagem Estrita e Testes de Qualidade. |
-| Fase 5 (Cloud - Ouro) | BigQuery + dbt Core | Concluída | Data Marts, materialização e contratos de dados. |
+| **Fase 0** | Base Técnica (Polars + dlt + Parquet) | **Concluída** | Motores genéricos `pipeline_bronze_raw_api`, `polars_zip`e normalização. |
+| **Fase 1** | Registry + Orquestrador (Expansão da ingestão) | **Em Execução** | Ingestão das bases estruturantes (SIGEPE, DEPRO, Vozes). |
+| **Fase 2** | Estabilização da Ingestão | Planejado | Confiabilidade operacional antes de ir para a nuvem. |
+| **Fase 3** | Orquestração de Pipelines | Planejado | Automatizar execução e gerenciar dependências. |
 
 ---
 
@@ -78,25 +78,26 @@ Para garantir a maturidade progressiva da solução (escalabilidade, DataOps e F
 
 ## Como Executar (Pipeline de Ingestão)
 
-### 1. Pré-requisitos
-- Python 3.12 ou superior.
-- Service Account do Google Cloud com permissões de BigQuery Data Editor.
-
-### 2. Configuração de Ambiente
+### 1. Preparação do Ambiente
+Certifique-se de estar com o Python 3.12+ ativo e as dependências instaladas:
 ```bash
-# Definir variável de ambiente para autenticação
-export GOOGLE_APPLICATION_CREDENTIALS="caminho/para/sua-chave.json"
+    python -m venv .venv
+    source .venv/bin/activate  # No Windows: .venv\Scripts\activate
+    pip install -r requirements.txt
 ```
 
-### 3. Execução da Ingestão
+### 2. CConfiguração de Credenciais e Variáveis
+O projeto utiliza um arquivo `.env` (não versionado) para chaves sensíveis. Crie um na raiz:
 ```bash
-python fase_2/14_ingestao_remuneracao_bronze.py
+    HASH_SALT="sua_chave_de_anonimizacao_aqui"
+    CHAVE_SIGEPE="seu_token_api_siape_consultas"
+    CHAVE_SOUGOV="seu_token_api_sougov"
 ```
 
-### 4. Para gerar e visualizar o dicionário de dados e a linhagem:
+### 3. EOrquestração da Carga (Padrão Registry)
+Para rodar a ingestão das bases mapeadas, utilizamos o orquestrador central que gerencia os motores Polars e dlt:
 ```bash
-dbt docs generate
-dbt docs serve
+    python fase3_upgrade_ingestao/executar_ingestao.py
 ```
 
 ---
@@ -104,12 +105,18 @@ dbt docs serve
 ## Estrutura do Repositório
 ```bash
 /
-├── docs/                     # Documentação técnica, Dicionários e Homologações.
-├── legado_pandas/            # Scripts das Fases 1 e 2 (Arquivados para histórico).
-├── fase3_upgrade_ingestao/   # Scripts de Ingestão de Alta Performance (Polars/dlt).
-├── analytics_gov/            # Projeto dbt (Modelos Prata, Ouro e Testes de Qualidade).
-├── .gitignore                # Regras de segurança para ocultar .venv, .parquet e .log.
-├── CONTRIBUTING.md           # Políticas de Versionamento e Commits.
+├── docs/
+│   ├── adrs/                    # Registros de Decisões Arquiteturais (ADR-001 a 006).
+│   ├── dicionarios/             # Mapeamento de variáveis das fontes federais.
+│   └── homologacoes/            # Termos de aceite da Camada Bronze.
+├── fase3_upgrade_ingestao/      # O CORAÇÃO DO PROJETO (Motores + Orquestrador).
+│   ├── executar_ingestao.py     # Script central de execução (Orquestrador).
+│   ├── pipeline_bronze_raw_api.py   # Motor de extração via dlt.
+│   └── pipeline_bronze_raw_polars.py # Motor de extração via Polars.
+├── legado_pandas/               # Scripts arquivados das Fases 1 e 2 originais.
+├── data_lake_local/             # Destino físico dos arquivos Parquet (Bronze).
+├── .env.example                 # Modelo de variáveis de ambiente.
+├── .gitignore                   # Proteção de logs, venv e pycache.
 └── README.md
 ```
 
