@@ -58,7 +58,7 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
         )
         #verificando existencia de CPF na base e aplicando anonimização quando houver
         if 'CPF' in df.columns:
-            df = df.columns(
+            df = df.with_columns(
                 pl.col('CPF').map_elements(lambda x: hashlib.sha256((str(x)+str(salt)).encode('utf-8')).hexdigest(), return_dtype=pl.String).alias('hash_cpf'),
             )
             #excluindo a coluna de CPF por segurança

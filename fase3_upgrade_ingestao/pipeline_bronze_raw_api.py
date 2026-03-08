@@ -42,7 +42,7 @@ def ingestao_bronze_raw_api(sistema, ano, mes, url_api, chave_autorizacao):
     pipeline = dlt.pipeline(pipeline_name=f'{sistema}' , destination= destino , dataset_name=f'bronze_{sistema}' )
 
     #conectando a base de dados
-    @dlt.resource(nome=sistema, write_disposition='replace')
+    @dlt.resource(name=sistema, write_disposition='replace')
     def conectar_api():
         #url_api_siapecad = 'https://apigateway.conectagov.estaleiro.serpro.gov.br/api-consulta-siape/v1/consulta-siape'
         
@@ -56,6 +56,7 @@ def ingestao_bronze_raw_api(sistema, ano, mes, url_api, chave_autorizacao):
             for linha in dados_api:
                 linha['source_system'] = f'{sistema}'
                 linha['ingestion_timestamp'] = datetime.now().isoformat()
+                linha['schema_version'] = 'v1'
 
                 #caso haja coluna CPF faz hash com salt
                 if 'cpf' in linha:
