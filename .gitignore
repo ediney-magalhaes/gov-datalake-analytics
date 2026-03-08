@@ -17,6 +17,7 @@ data_lake_local/
 __pycache__/
 .DS_Store
 *.log
+*.pyc
 
 # IDEs
 .vscode/

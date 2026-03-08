@@ -1,0 +1,21 @@
+import os
+from dotenv import load_dotenv
+from pipeline_bronze_raw_api import ingestao_bronze_raw_api
+from pipeline_bronze_raw_polars import ingestao_bronze_raw_zip
+
+#carregar variáveis de ambiente
+load_dotenv()
+
+#configurando parâmetros SIGEPE
+#bases_api = [{'sistema': 'sigepe', 'ano': '2025', 'mes': '01',
+#              'url_api': 'https://apigateway.conectagov.estaleiro.serpro.gov.br/api-consulta-siape/v1/consulta-siape',
+#              'chave_autorizacao': os.getenv('CHAVE_SIGEPE')}]
+
+#configurando parâmetros PEsquisa de vozes
+bases_arquivos = [{'sistema': 'pesquisa_vozes', 'ano': '2024', 'mes': '01',
+                   'url_download': 'https://www.gov.br/gestao/pt-br/assuntos/pesquisa-vozes/arquivos/microdados_vozes_1_edicao.zip',
+                    'nome_arquivo_interno': 'microdados_vozes.csv'}]
+
+for base in bases_arquivos:
+    ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'], url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
+        
