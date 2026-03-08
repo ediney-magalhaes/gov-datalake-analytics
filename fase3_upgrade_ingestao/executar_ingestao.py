@@ -12,10 +12,19 @@ load_dotenv()
 #              'chave_autorizacao': os.getenv('CHAVE_SIGEPE')}]
 
 #configurando parâmetros PEsquisa de vozes
-bases_arquivos = [{'sistema': 'pesquisa_vozes', 'ano': '2024', 'mes': '01',
-                   'url_download': 'https://www.gov.br/gestao/pt-br/assuntos/pesquisa-vozes/arquivos/microdados_vozes_1_edicao.zip',
-                    'nome_arquivo_interno': 'microdados_vozes.csv'}]
+#bases_arquivos = [{'sistema': 'pesquisa_vozes', 'ano': '2024', 'mes': '01',
+#                   'url_download': 'https://www.gov.br/gestao/pt-br/assuntos/pesquisa-vozes/arquivos/microdados_vozes_1_edicao.zip',
+#                    'nome_arquivo_interno': 'microdados_vozes.csv'}]
+
+#for base in bases_arquivos:
+#    ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'], url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
+
+#configurando parâmetros base DEPRO
+bases_arquivos = [
+    {'sistema': 'depro_alocacao', 'ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip','nome_arquivo_interno':'alocacao-servidores.csv'},
+    {'sistema':'depro_cargos','ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip', 'nome_arquivo_interno':'cargos-efetivos.csv'},
+    {'sistema':'depro_aposentadorias','ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip','nome_arquivo_interno':'projecao-aposentadorias.csv' }]
 
 for base in bases_arquivos:
-    ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'], url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
-        
+    ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'],
+                            url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
