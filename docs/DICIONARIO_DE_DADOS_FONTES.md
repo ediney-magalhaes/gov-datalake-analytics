@@ -61,6 +61,17 @@ Devido à presença de caracteres especiais, acentos, símbolos monetários e as
 
 ---
 
+## 4. Portal da Transparência (SIAPE / CGU)
+**Padrão de Ingestão:** CSV compactado em ZIP via Motor Polars (`pipeline_bronze_raw_polars`).
+
+| Sistema / Domínio | URL do ZIP Mensal (Ex: 2025/01) | Nome Interno do CSV (Atenção) |
+| :--- | :--- | :--- |
+| **siape_ativos** | `.../202501_Servidores_SIAPE` | `202501_Cadastro.csv` |
+| **siape_remuneracao** | `.../202501_Servidores_SIAPE` | `202501_Remuneracao.csv` |
+| **siape_aposentados** | `.../202501_Aposentados_SIAPE` | **`202501_Cadastro.csv`** *(Governo reaproveita o nome dos ativos)* |
+
+---
+
 # Camada Prata — Transformação (dbt)
 
 - As tabelas da Camada Prata passam por tipagem estrita, renomeação semântica e deduplicação técnica.
@@ -131,3 +142,4 @@ Para assegurar que o Governo não tome decisões baseadas em dados financeiros d
 Para garantir a consistência e rastreabilidade exigidas no Produto 4, a tabela Ouro possui os seguintes bloqueios de auditoria automatizados:
 - **Integridade Relacional**: A chave de cruzamento `hash_cpf` e a coluna `tematica_curso` possuem testes de `not_null`.
 - **Governança de Domínio**: A coluna `situacao_matricula` possui um teste estrito de `accepted_values`, garantindo que o banco de dados rejeite qualquer atualização que traga status fora do padrão acordado ('Concluído', 'Em andamento', 'Evadido', 'Não Informado').
+

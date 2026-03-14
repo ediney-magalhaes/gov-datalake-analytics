@@ -43,11 +43,12 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
 
     #abrindo o arquivo zip
     with zipfile.ZipFile(arquivo_zip) as z:
+        #print(f"\nCONTEÚDO DO ZIP ({sistema}): {z.namelist()}\n")
         #extraindo o arquivo
         arquivo_extraido = z.open(nome_arquivo_interno)
 
         #lendo o arquivo com o Polars
-        df = pl.read_csv(arquivo_extraido.read(), separator=';', encoding='latin1')
+        df = pl.read_csv(arquivo_extraido.read(), separator=';', encoding='latin1', infer_schema_length=0)
         logging.info(f'Arquivo lido com sucesso pelo Polars. {df.height} linhas encontradas.')
 
         #adicionando colunas de metadados

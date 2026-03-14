@@ -21,10 +21,21 @@ load_dotenv()
 #    ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'], url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
 
 #configurando parâmetros base DEPRO
+#bases_arquivos = [
+#    {'sistema': 'depro_alocacao', 'ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip','nome_arquivo_interno':'alocacao-servidores.csv'},
+#    {'sistema':'depro_cargos','ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip', 'nome_arquivo_interno':'cargos-efetivos.csv'},
+#    {'sistema':'depro_aposentadorias','ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip','nome_arquivo_interno':'projecao-aposentadorias.csv' }]
+
+#for base in bases_arquivos:
+#    ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'],
+#                            url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
+#    normalizacao_da_bronze_raw(sistema= base['sistema'], ano= base['ano'], mes=base['mes'])
+
+#configurando parâmetros base SIAPE
 bases_arquivos = [
-    {'sistema': 'depro_alocacao', 'ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip','nome_arquivo_interno':'alocacao-servidores.csv'},
-    {'sistema':'depro_cargos','ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip', 'nome_arquivo_interno':'cargos-efetivos.csv'},
-    {'sistema':'depro_aposentadorias','ano': '2025', 'mes': '07', 'url_download': 'https://repositorio.dados.gov.br/seges/raio-x/raiox-2025-07.zip','nome_arquivo_interno':'projecao-aposentadorias.csv' }]
+    {'sistema': 'siape_ativos', 'ano': '2025', 'mes': '01', 'url_download': 'https://portaldatransparencia.gov.br/download-de-dados/servidores/202501_Servidores_SIAPE','nome_arquivo_interno':'202501_Cadastro.csv'},
+    {'sistema':'siape_remuneracao','ano': '2025', 'mes': '01', 'url_download': 'https://portaldatransparencia.gov.br/download-de-dados/servidores/202501_Servidores_SIAPE', 'nome_arquivo_interno':'202501_Remuneracao.csv'},
+    {'sistema':'siape_aposentados','ano': '2025', 'mes': '01', 'url_download': 'https://portaldatransparencia.gov.br/download-de-dados/servidores/202501_Aposentados_SIAPE', 'nome_arquivo_interno':'202501_Cadastro.csv'}]
 
 for base in bases_arquivos:
     ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'],
