@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from pipeline_bronze_raw_api import ingestao_bronze_raw_api
 from pipeline_bronze_raw_polars import ingestao_bronze_raw_zip
+from pipeline_bronze_normalized import normalizacao_da_bronze_raw
 
 #carregar variáveis de ambiente
 load_dotenv()
@@ -28,3 +29,4 @@ bases_arquivos = [
 for base in bases_arquivos:
     ingestao_bronze_raw_zip(sistema=base['sistema'], ano=base['ano'], mes=base['mes'],
                             url_download=base['url_download'], nome_arquivo_interno=base['nome_arquivo_interno'])
+    normalizacao_da_bronze_raw(sistema= base['sistema'], ano= base['ano'], mes=base['mes'])
