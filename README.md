@@ -23,7 +23,7 @@ O pipeline desenvolvido foca em resiliência e segurança:
 
 ---
 
-## Decisões Arquiteturais - Fase 3 (Upgrade de Ingestão e Governança)
+## Decisões Arquiteturais (Evolução da Ingestão e Governança)
 
 Para garantir a escalabilidade exigida e a aprovação em auditorias de conformidade, a arquitetura de ingestão (Camada Bronze) foi reestruturada adotando o padrão *Modern Data Stack*:
 
@@ -31,8 +31,26 @@ Para garantir a escalabilidade exigida e a aprovação em auditorias de conformi
 * **Framework de Extração (APIs):** Adoção do **dlt (Data Load Tool)** para automatizar, paralelizar e padronizar as requisições em APIs complexas (como SIAPEcad e SouGov). Implementação de resiliência de rede (Graceful Degradation) com blocos `try...except` para suportar instabilidades nos firewalls do Governo (Serpro).
 * **Armazenamento Colunar (Data Lake):** Transição de bancos locais/memória para persistência física no formato **Parquet** via destino `filesystem` nativo do dlt. Isso garante alta compressão e atua como backup imutável da Camada Bronze, pronto para migração Cloud (Google Cloud Storage / AWS S3).
 * **Segurança In-Flight (LGPD):** Implementação de Hashing Determinístico (SHA-256) na coluna CPF utilizando a biblioteca nativa `hashlib` durante o processamento in-memory, antes da persistência no disco.
-* **Governança Operacional:** Implementação de **Dual Logging** (Terminal + `.log` local via biblioteca nativa `logging`), registrando a saúde, latência e falhas de cada extração, provendo total rastreabil
+* **Governança Operacional:** Implementação de **Dual Logging** (Terminal + `.log` local via biblioteca nativa `logging`), registrando a saúde, latência e falhas de cada extração, provendo total rastreabilidade.
 * **Orquestrador Centralizado:** Implementação do Padrão *Registry* no script `executar_ingestao.py`. A lógica de ingestão foi desacoplada das configurações, permitindo que novas bases sejam adicionadas apenas via metadados (dicionários), sem alteração no código-fonte dos motores.
+
+---
+
+## Padrões de Arquitetura e Governança (Camada Bronze)
+
+Para garantir a integridade analítica e a governança dos dados, a Camada Bronze segue regras estritas implementadas de forma automatizada via código:
+
+1. **Divisão Lógica:** A Camada Bronze atua em dois estágios físicos no Data Lake:
+   - `bronze_raw`: Armazena o dado no formato mais fiel possível à origem, atuando como cofre imutável (com aplicação prévia de Hashing LGPD).
+   - `bronze_normalized`: Armazena o dado estruturalmente padronizado e tipado, pronto para ser consumido pelas camadas analíticas.
+2. **Padrão de Pastas (Particionamento):** O Data Lake segue estritamente o particionamento temporal padrão Hive no formato: `/{camada}/{sistema}/year=YYYY/month=MM/`.
+3. **Convenção de Nomenclatura (Naming Convention):** Todas as colunas na camada `bronze_normalized` são convertidas obrigatoriamente para o padrão `snake_case` (ex: "Nome do Servidor" converte para `nome_do_servidor`).
+4. **Metadados Obrigatórios:** Toda tabela processada na camada Normalized recebe a injeção automática das seguintes colunas de auditoria:
+   - `source_system`: Sistema de origem do dado (ex: `depro_alocacao`).
+   - `ingestion_timestamp`: Data e hora exata do processamento e normalização.
+   - `schema_version`: Controle de versão estrutural (ex: `v1`).
+   - `hash_cpf`: Identificador anonimizado (quando o dado original contiver pessoa física).
+
 ---
 
 ## Qualidade e Integridade na Camada Bronze (In-Flight Quality)
@@ -58,10 +76,10 @@ Para garantir a maturidade progressiva da solução (escalabilidade, DataOps e F
 
 | Fase | Descrição | Status | Entregáveis |
 |------|------------|--------|------------|
-| **Fase 0** | Base Técnica (Polars + dlt + Parquet) | **Concluída** | Motores genéricos `pipeline_bronze_raw_api`, `polars_zip`e normalização. |
-| **Fase 1** | Registry + Orquestrador (Expansão da ingestão) | **Em Execução** | Ingestão das bases estruturantes (SIGEPE, DEPRO, Vozes). |
+| **Fase 0** | Base Técnica (Polars + dlt + Parquet + Normalização) | **Concluída** | Estrutura Raw/Normalized, Naming Convention e injeção de Metadados Universais. |
+| **Fase 1** | Registry + Orquestrador (Expansão da ingestão) | **Em Execução** | Ingestão das bases estruturantes (SIGEPE, DEPRO, Vozes, Observatório). |
 | **Fase 2** | Estabilização da Ingestão | Planejado | Confiabilidade operacional antes de ir para a nuvem. |
-| **Fase 3** | Orquestração de Pipelines | Planejado | Automatizar execução e gerenciar dependências. |
+| **Fase 3** | Orquestração de Pipelines | Planejado | Automatizar execução e gerenciar dependências com Dagster. |
 
 ---
 
@@ -81,26 +99,24 @@ Para garantir a maturidade progressiva da solução (escalabilidade, DataOps e F
 ### 1. Preparação do Ambiente
 Certifique-se de estar com o Python 3.12+ ativo e as dependências instaladas:
 ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # No Windows: .venv\Scripts\activate
-    pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate  # No Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-### 2. CConfiguração de Credenciais e Variáveis
+### 2. Configuração de Credenciais e Variáveis
 O projeto utiliza um arquivo `.env` (não versionado) para chaves sensíveis. Crie um na raiz:
 ```bash
-    HASH_SALT="sua_chave_de_anonimizacao_aqui"
-    CHAVE_SIGEPE="seu_token_api_siape_consultas"
-    CHAVE_SOUGOV="seu_token_api_sougov"
+HASH_SALT="sua_chave_de_anonimizacao_aqui"
+CHAVE_SIGEPE="seu_token_api_siape_consultas"
+CHAVE_SOUGOV="seu_token_api_sougov"
 ```
 
-### 3. EOrquestração da Carga (Padrão Registry)
+### 3. Orquestração da Carga (Padrão Registry)
 Para rodar a ingestão das bases mapeadas, utilizamos o orquestrador central que gerencia os motores Polars e dlt:
 ```bash
-    python fase3_upgrade_ingestao/executar_ingestao.py
+python fase3_upgrade_ingestao/executar_ingestao.py
 ```
-
----
 
 ## Estrutura do Repositório
 ```bash
@@ -111,18 +127,16 @@ Para rodar a ingestão das bases mapeadas, utilizamos o orquestrador central que
 │   └── homologacoes/            # Termos de aceite da Camada Bronze.
 ├── fase3_upgrade_ingestao/      # O CORAÇÃO DO PROJETO (Motores + Orquestrador).
 │   ├── executar_ingestao.py     # Script central de execução (Orquestrador).
-│   ├── pipeline_bronze_raw_api.py   # Motor de extração via dlt.
-│   └── pipeline_bronze_raw_polars.py # Motor de extração via Polars.
+│   ├── pipeline_bronze_raw_api.py       # Motor de extração via dlt.
+│   ├── pipeline_bronze_raw_polars.py    # Motor de extração via Polars.
+│   └── pipeline_bronze_normalized.py    # Motor de padronização estrutural e metadados.
+├── logs/                        # Centralização do Dual Logging de auditoria da Camada Bronze.
 ├── legado_pandas/               # Scripts arquivados das Fases 1 e 2 originais.
-├── data_lake_local/             # Destino físico dos arquivos Parquet (Bronze).
+├── data_lake_local/             # Destino físico dos arquivos Parquet particionados.
 ├── .env.example                 # Modelo de variáveis de ambiente.
 ├── .gitignore                   # Proteção de logs, venv e pycache.
 └── README.md
 ```
 
-**Ediney Magalhães**
-
-Engenharia de Dados e Analytics
-/Arquitetura de Dados em Nuvem
-
----
+#### Ediney Magalhães
+##### Analytics Engineer | Data Engineer | Estatístico
