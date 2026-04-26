@@ -1,0 +1,109 @@
+import io
+import os
+import re
+import requests
+import zipfile
+import tarfile
+import polars as pl
+import logging
+import hashlib
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+salt = os.getenv('HASH_SALT')
+
+def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_interno, separador=';', encoding='latin1', formato_compactado='zip'):
+    """Baixa arquivo compactado, extrai CSV, anonimiza CPF e salva como Parquet particionado na Bronze Raw."""
+    
+    #obtendo retorno da url em bytes
+    logging.info(f'Iniciando o download dos dados do {sistema} para o periodo {ano}{mes}')
+    resposta = requests.get(url_download, verify=False)
+
+    #abrindo o arquivos conforme formato
+    arquivo_bytes = io.BytesIO(resposta.content)
+    if formato_compactado == 'zip':
+        with zipfile.ZipFile(arquivo_bytes) as z:
+            conteudo = z.open(nome_arquivo_interno).read()
+    elif formato_compactado == 'tar.gz':
+        with tarfile.open(fileobj=arquivo_bytes, mode='r:gz') as t:
+            conteudo = t.extractfile(nome_arquivo_interno).read()
+
+    #lendo o arquivo com o Polars
+    df = pl.read_csv(conteudo, separator=separador, encoding=encoding, infer_schema_length=0)
+    logging.info(f'Arquivo lido com sucesso pelo Polars. {df.height} linhas encontradas.')
+
+    #adicionando colunas de metadados
+    df = df.with_columns(
+        pl.lit(sistema).alias('source_system'),
+        pl.lit(datetime.now().isoformat()).alias('ingestion_timestamp'),
+        pl.lit('v1').alias('schema_version')
+    )
+
+    #verificando existencia de CPF na base e aplicando anonimização quando houver
+    if 'CPF' in df.columns:
+        df = df.with_columns(
+            pl.col('CPF').map_elements(lambda x: hashlib.sha256((str(x)+str(salt)).encode('utf-8')).hexdigest(), return_dtype=pl.String).alias('hash_cpf'),
+        )
+        #excluindo a coluna de CPF por segurança
+        df = df.drop('CPF')
+        logging.info('Anonimizacao aplicada com sucesso na coluna CPF!')
+    else:
+        logging.info('Coluna CPF não encontrada. Pulando anonimização.')
+
+     #criando caminho da partição (Bronze Raw)
+    caminho_particao = f'data_lake_local/bronze_raw/{sistema}/year={ano}/month={mes}'
+    
+    #criando diretorio
+    os.makedirs(caminho_particao, exist_ok=True)
+    
+    #salvando o arquivo
+    df.write_parquet(f'{caminho_particao}/part-000.parquet')
+    logging.info('Arquivo salvo com sucesso!')
+
+# Função auxiliar para garantir snake_case
+def para_snake_case(texto):
+    """Converte nome de coluna para snake_case."""
+    texto = str(texto).strip().lower()
+    texto = re.sub(r'[^\w\s-]', '', texto)
+    texto = re.sub(r'[\s-]+', '_', texto)
+    return texto
+
+# função para normalização das bases
+def normalizacao_da_bronze_raw(sistema, ano, mes):
+    """Lê Parquet da Bronze Raw, padroniza colunas e salva na Bronze Normalized."""
+
+    # definindo local de leitura dos dados
+    caminho_origem = f'data_lake_local/bronze_raw/{sistema}/year={ano}/month={mes}/part-000.parquet'
+
+    # verificando existencia do arquivo
+    if not os.path.exists(caminho_origem):
+        logging.error(f"Arquivo não encontrado na origem: {caminho_origem}")
+        return
+
+    # estabelecendo pasta de destino bronze_normalized
+    caminho_destino_pasta = f'data_lake_local/bronze_normalized/{sistema}/year={ano}/month={mes}'
+
+    # lendo arquivo parquet
+    df_normalizado = pl.read_parquet(caminho_origem)
+    logging.info(f'Lendo arquivo na origem: {sistema} ({ano}/{mes})')
+
+    # 1. Transformação do nome das colunas - snake_case
+    mapeamento_colunas = {coluna: para_snake_case(coluna) for coluna in df_normalizado.columns}
+    df_normalizado = df_normalizado.rename(mapeamento_colunas)
+    logging.info('Colunas transformadas para snake_case com sucesso!')
+
+    # 2. Injeção de Metadados Universais (Arquitetura Fase 0)
+    df_normalizado = df_normalizado.with_columns([
+        pl.lit(sistema).alias('source_system'),
+        pl.lit(datetime.now()).alias('ingestion_timestamp'),
+        pl.lit('v1').alias('schema_version')
+    ])
+    logging.info('Metadados universais (source_system, ingestion_timestamp, schema_version) injetados!')
+
+    # criando diretorio
+    os.makedirs(caminho_destino_pasta, exist_ok=True)
+    
+    # salvando o arquivo
+    df_normalizado.write_parquet(f'{caminho_destino_pasta}/part-000.parquet')
+    logging.info(f'Arquivo salvo com sucesso em: {caminho_destino_pasta}')
