@@ -32,5 +32,5 @@ de transformação (dbt Core).
 - Curva de aprendizado do paradigma de assets do Dagster
 - Migração do executar_ingestao.py atual para o modelo de assets requer refatoração dos scripts existentes
 
-**Dependência:**
-- Implementação planejada para a Fase 3, após estabilização completa da ingestão (Fase 2)
+**Nota:**
+- Originalmente planejado para Fase 3, implementado na Fase 1 por decisão arquitetural — a reestruturação em assets Dagster foi feita durante a ingestão para evitar retrabalho.
