@@ -27,7 +27,16 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
             conteudo = z.open(nome_arquivo_interno).read()
     elif formato_compactado == 'tar.gz':
         with tarfile.open(fileobj=arquivo_bytes, mode='r:gz') as t:
-            conteudo = t.extractfile(nome_arquivo_interno).read()
+            if isinstance(nome_arquivo_interno, list):
+            # Dupla descompactação: TAR.GZ dentro de TAR.GZ
+            # Passo 1: extrair o TAR.GZ intermediário
+                conteudo_intermediario = io.BytesIO(t.extractfile(nome_arquivo_interno[0]).read())
+            # Passo 2: abrir o TAR.GZ intermediário e extrair o CSV final
+                with tarfile.open(fileobj=conteudo_intermediario, mode='r:gz') as t2:
+                    conteudo = t2.extractfile(nome_arquivo_interno[1]).read()
+            else:
+            # Descompactação simples: TAR.GZ com CSV direto
+                conteudo = t.extractfile(nome_arquivo_interno).read()
 
     #lendo o arquivo com o Polars
     df = pl.read_csv(conteudo, separator=separador, encoding=encoding, infer_schema_length=0)
