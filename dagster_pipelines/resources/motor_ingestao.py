@@ -17,8 +17,15 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
     """Baixa arquivo compactado, extrai CSV, anonimiza CPF e salva como Parquet particionado na Bronze Raw."""
     
     #obtendo retorno da url em bytes
+    cabecalho = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'pt-BR,pt;q=0.9',
+    'Connection': 'keep-alive'
+    }
     logging.info(f'Iniciando o download dos dados do {sistema} para o periodo {ano}{mes}')
-    resposta = requests.get(url_download, verify=False)
+    resposta = requests.get(url_download, verify=False, headers=cabecalho, timeout=120)
 
     #abrindo o arquivos conforme formato
     arquivo_bytes = io.BytesIO(resposta.content)

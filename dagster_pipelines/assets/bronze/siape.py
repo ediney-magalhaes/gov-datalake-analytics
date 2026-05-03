@@ -15,16 +15,31 @@ particao_mensal = MonthlyPartitionsDefinition(start_date="2015-01-01")
 @asset(group_name="bronze_siape", partitions_def=particao_mensal)
 def siape_ativos(context):
     """Cadastro de servidores ativos — Bronze Raw e Normalized"""
+    import requests
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[5:7]
+    url = f'https://portaldatransparencia.gov.br/download-de-dados/servidores/{ano}{mes}_Servidores_SIAPE'
     ingestao_bronze_raw_zip(
         sistema='siape_ativos',
         ano=ano, mes=mes,
-        url_download=f'https://portaldatransparencia.gov.br/download-de-dados/servidores/{ano}{mes}_Servidores_SIAPE',
+        url_download=url,
         nome_arquivo_interno=f'{ano}{mes}_Cadastro.csv'
     )
     normalizacao_da_bronze_raw(sistema='siape_ativos', ano=ano, mes=mes)
+#@asset(group_name="bronze_siape", partitions_def=particao_mensal)
+#def siape_ativos(context):
+#    """Cadastro de servidores ativos — Bronze Raw e Normalized"""
+#    chave = context.partition_key
+#    ano = chave[:4]
+#    mes = chave[4:7]
+#    ingestao_bronze_raw_zip(
+#        sistema='siape_ativos',
+#        ano=ano, mes=mes,
+#        url_download=f'https://portaldatransparencia.gov.br/download-de-dados/servidores/{ano}{mes}_Servidores_SIAPE',
+#        nome_arquivo_interno=f'{ano}{mes}_Cadastro.csv'
+#    )
+#    normalizacao_da_bronze_raw(sistema='siape_ativos', ano=ano, mes=mes)
 
 # Asset: siape_remuneracao
 # O que faz: Baixa o registro de remunerações de servidores ativos do Portal da Transparência, anonimiza CPF e salva como Parquet particionado por ano/mês
@@ -38,7 +53,7 @@ def siape_remuneracao(context):
     """Remuneração de servidores ativos — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[4:7]
     ingestao_bronze_raw_zip(
         sistema='siape_remuneracao',
         ano=ano, mes=mes,
@@ -59,7 +74,7 @@ def siape_aposentados(context):
     """Cadastro de aposentados e pensionistas — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[4:7]
     ingestao_bronze_raw_zip(
         sistema='siape_aposentados',
         ano=ano, mes=mes,
@@ -80,7 +95,7 @@ def siape_afastamentos(context):
     """Afastamentos de servidores ativos — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[4:7]
     ingestao_bronze_raw_zip(
         sistema='siape_afastamentos',
         ano=ano, mes=mes,
