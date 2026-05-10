@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 salt = os.getenv('HASH_SALT')
+destino_bronze = os.getenv('DESTINO_BRONZE')
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "service_account.json"
 
 def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_interno, separador=';', encoding='latin1', formato_compactado='zip'):
     """Baixa arquivo compactado, extrai CSV, anonimiza CPF e salva como Parquet particionado na Bronze Raw."""
@@ -68,10 +70,12 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
         logging.info('Coluna CPF não encontrada. Pulando anonimização.')
 
      #criando caminho da partição (Bronze Raw)
-    caminho_particao = f'data_lake_local/bronze_raw/{sistema}/year={ano}/month={mes}'
+    caminho_particao = f'{destino_bronze}/bronze_raw/{sistema}/year={ano}/month={mes}'
     
-    #criando diretorio
-    os.makedirs(caminho_particao, exist_ok=True)
+    #verificando caminho
+    if not caminho_particao.startswith("gs://"):
+        #criando diretorio
+        os.makedirs(caminho_particao, exist_ok=True)
     
     #salvando o arquivo
     df.write_parquet(f'{caminho_particao}/part-000.parquet')
@@ -90,15 +94,17 @@ def normalizacao_da_bronze_raw(sistema, ano, mes):
     """Lê Parquet da Bronze Raw, padroniza colunas e salva na Bronze Normalized."""
 
     # definindo local de leitura dos dados
-    caminho_origem = f'data_lake_local/bronze_raw/{sistema}/year={ano}/month={mes}/part-000.parquet'
+    caminho_origem = f'{destino_bronze}/bronze_raw/{sistema}/year={ano}/month={mes}/part-000.parquet'
 
-    # verificando existencia do arquivo
-    if not os.path.exists(caminho_origem):
-        logging.error(f"Arquivo não encontrado na origem: {caminho_origem}")
-        return
+    #verificando caminho
+    if not caminho_origem.startswith("gs://"):
+        # verificando existencia do arquivo
+        if not os.path.exists(caminho_origem):
+            logging.error(f"Arquivo não encontrado na origem: {caminho_origem}")
+            return
 
     # estabelecendo pasta de destino bronze_normalized
-    caminho_destino_pasta = f'data_lake_local/bronze_normalized/{sistema}/year={ano}/month={mes}'
+    caminho_destino_pasta = f'{destino_bronze}/bronze_normalized/{sistema}/year={ano}/month={mes}'
 
     # lendo arquivo parquet
     df_normalizado = pl.read_parquet(caminho_origem)
@@ -117,8 +123,10 @@ def normalizacao_da_bronze_raw(sistema, ano, mes):
     ])
     logging.info('Metadados universais (source_system, ingestion_timestamp, schema_version) injetados!')
 
-    # criando diretorio
-    os.makedirs(caminho_destino_pasta, exist_ok=True)
+    #verificando caminho
+    if not caminho_destino_pasta.startswith("gs://"):
+        # criando diretorio
+        os.makedirs(caminho_destino_pasta, exist_ok=True)
     
     # salvando o arquivo
     df_normalizado.write_parquet(f'{caminho_destino_pasta}/part-000.parquet')
