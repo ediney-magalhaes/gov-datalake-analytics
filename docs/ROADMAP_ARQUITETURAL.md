@@ -1,160 +1,233 @@
-# Roadmap Arquitetural — Data Lake Analytics GOV
-
-Este documento define a evolução planejada da arquitetura do projeto, organizando as fases técnicas e as próximas decisões estruturantes.
-
-O objetivo é garantir maturidade progressiva da solução, alinhando:
-
-- Escalabilidade
-
-- Governança
-
-- Conformidade (LGPD)
-
-- Performance
-
-- Sustentabilidade (FinOps)
-
-- Reprodutibilidade (DataOps)
-
+# Roadmap — Data Lake Analytics GOV
+### Plataforma de Análise de Pessoal da Administração Pública Federal
+**Motivação:** PNUD BRA/21/011 — MGI/SETE/SGP  
+**Última atualização:** 13/06/2026
 
 ---
 
+## 1. Visão Geral do Projeto
 
+Este projeto implementa uma **Plataforma de Dados Governamental** para consolidação, tratamento e análise da força de trabalho do Poder Executivo Federal, abrangendo quatro editais promovidos pelo PNUD em parceria com o MGI.
 
-## 1. Histórico de Evolução (Fases Concluídas / Em Refatoração)
+**Arquitetura:** Medallion (Bronze → Silver → Gold), implementada em Google Cloud Platform (GCS + BigQuery), orquestrada pelo Dagster e transformada via dbt Core.
 
-### 1.1 Visão Geral da Arquitetura
+**Bases de dados:** SIAPE, DEPRO, ENAP, Observatório de Pessoal, PEP, ACT Lemann, Pesquisa Vozes, Base de Currículos.
 
-A solução adota o paradigma Medallion Architecture (Bronze -> Prata -> Ouro), implementado integralmente em ambiente Cloud Native (Google Cloud Platform), priorizando:
+**Princípios norteadores:**
+- Segurança First: pseudonimização LGPD (SHA-256 + Salt) aplicada in-flight
+- Analytics as Code: todo o fluxo versionado em Git
+- Idempotência: reprocessamento sem duplicidade
+- FinOps: particionamento Hive e clustering BigQuery para controle de custos
 
-- Escalabilidade elástica e processamento colunar otimizado.
-- Conformidade estrita com a LGPD (Lei Geral de Proteção de Dados).
-- Implementação de práticas de FinOps para controle de custos.
-- Governança de dados orientada a testes automatizados.
-
----
-
-### 1.2 Camada Bronze — Ingestão e Resiliência (Modern Data Stack)
-
-Responsável pela captura fiel dos dados da origem, preservando a rastreabilidade histórica e criando um backup físico e imutável no Data Lake.
-
-#### Características Técnicas:
-- **Motores de Extração Híbridos:** Uso do motor **Polars** (Apache Arrow) para processamento vetorizado in-memory de arquivos massivos (ZIP/CSV), e do framework **dlt (Data Load Tool)** para extração automatizada, resiliente e paginada de APIs governamentais complexas.
-- **Persistência Física (Data Lake):** O pipeline não envia dados brutos direto para o Data Warehouse. O dado pousa primeiramente em Cloud Storage (ou sistema de arquivos local) no formato colunar **Parquet**, garantindo alta compressão (~80%) e backup histórico imutável.
-    - A organização física no Data Lake segue o padrão **Hive Partitioning (year=YYYY/month=MM)**, visando otimização de scans (Partition Pruning) e redução drástica de custos no BigQuery (FinOps).
-- **Normalização de Schema:** Aplicação de Expressões Regulares (Regex) in-flight para garantir que 100% dos nomes de colunas sejam compatíveis com o padrão ANSI SQL.
-- **Governança Operacional e Resiliência:** Rastreabilidade ponta a ponta garantida por **Dual Logging** (Terminal + arquivo físico `.log`) via biblioteca nativa `logging`, atendendo aos requisitos estritos de auditoria. Falhas no firewall do Governo são mitigadas com tratamento de exceções (`try...except`) e *Graceful Degradation*.
-
-#### Segurança (LGPD):
-- Pseudonimização determinística (SHA-256) aplicada in-flight no CPF, **utilizando um 'Salt' criptográfico estático (gerenciado via variáveis de ambiente** `.env`) para mitigar riscos de engenharia reversa e ataques de força bruta.
+> Para detalhamento arquitetural completo, consulte `PROPOSTA_ARQUITETURA_MAPEAMENTO.md`.
 
 ---
 
-### 1.3 Camada Prata — Transformação e Qualidade (dbt)
+## 2. Estrutura de Trilhas
 
-Responsável pela limpeza técnica, tipagem estrita e garantia de integridade histórica.
+O projeto opera em quatro trilhas com dependência em cascata:
 
-#### Regras de Negócio e Engenharia:
-- Tipagem de dados (DATE, NUMERIC, STRING) e padronização para snake_case.
-- Deduplicação técnica: Uso de funções de janela (ROW_NUMBER) particionadas por hash_cpf, id_vinculo e mes_competencia.
-- Observabilidade de Nulos: Imputação de valores padrão (ex: 'NAO INFORMADO') para manter a integridade da volumetria original da fonte.
+```
+Trilha A — Plataforma de Dados (Edital 01)
+    └── alimenta
+Trilha B — Estudos Analíticos: Remuneração e Trajetórias (Edital 02)
+Trilha C — Estudos Analíticos: Competências e Diversidade (Edital 04)
+    └── B e C concluídas alimentam
+Trilha D — Supervisão e Integração Final (Edital 03)
+```
 
-#### Validação de Qualidade:
-Execução sistemática de dbt tests (Unique, Not Null, Accepted Values) em cada ciclo de transformação.
-
----
-
-### 1.4 Camada Ouro — Consumo e Otimização (FinOps)
-
-Modelo totalmente implementado e otimizado para alta performance analítica no Google BigQuery, atendendo aos blocos temáticos do Produto 4 do Edital.
-
-#### Estratégia de Modelagem e Integração:
-- **OBT (One Big Table):** Adoção de tabelas analíticas consolidadas para reduzir a complexidade e o custo de JOINs no Power BI.
-- **Integração Multi-fontes:** Cruzamento validado entre as bases do SIAPE e ENAP, garantido por chaves criptografadas unificadas (`hash_cpf`).
-
-#### Estratégia Colunar e FinOps:
-- **Materialização Física:** As tabelas finais (*Data Marts*) foram materializadas fisicamente como `table` via dbt. Isso garante alta performance de leitura e previsibilidade de custos na nuvem, evitando o recálculo a cada consulta.
-- **Particionamento e Clustering (Planejado para escala):** Adoção de `PARTITION BY mes_referencia` para otimização de scans (Partition Pruning) e `CLUSTER BY orgao, uf, hash_cpf` para acelerar filtros de busca.
-
-#### Governança e Qualidade:
-- Contratos de dados e auditoria de qualidade (dbt tests) são aplicados no momento da transformação final, bloqueando inconsistências (ex: status fora do padrão ou nulos não tratados) antes da disponibilização no Data Lake.
+**Trilhas B e C** são paralelas e independentes entre si, mas complementares no resultado final. Ambas dependem da Gold (Trilha A).  
+**Trilha D** é ativada somente após a conclusão de B e C.
 
 ---
 
-## 2. Reestruturação Arquitetural
+## 3. Estado Atual
 
-**Motivador da Mudança**: O projeto concluiu com sucesso a sua Prova de Conceito (PoC) ponta a ponta. Agora o projeto se expande de um "Pipeline de Dados" para uma Plataforma de Dados Governamental. Serão ingeridos 6 sistemas estruturantes simultâneos (SIAPE, SIAPEcad, SIGEPE, SouGov, Vozes, DEPRO) com mais de 10 anos de histórico cada.
+### 3.1 Visão Macro por Fase
 
-**A Grande Decisão Arquitetural (Divisão da Camada Bronze)**:
-Para evitar que a heterogeneidade dessas 6 fontes diferentes resulte em maiores custos de processamento no BigQuery e gere gargalos na transformação (dbt), a Camada Bronze foi dividida logicamente em duas zonas:
-- **Bronze Raw**: Persistência imutável e 100% fiel à origem (Evidência de Auditoria). Sem regras de negócio, focada apenas na extração resiliente e pseudonimização `in-flight`.
-- **Bronze Normalized**: Padronização estrutural mínima para reduzir o custo de transformação na camada Silver. Aqui ocorre a harmonização de schemas, padronização em `snake_case`, injeção de metadados técnicos (ex: `ingestion_timestamp`, `source_system`) e alinhamento de chaves (ex: `hash_cpf`). A camada Silver (Prata) deixa de fazer "higiene estrutural" e passa a focar apenas em regras de negócio analíticas.
-
-
----
-
-## 2.1 Novo Roadmap de Escala da Plataforma
-Este cronograma (estimado em 3 a 4 meses) foca em estabilizar completamente a ingestão antes de reativar as camadas analíticas.
-
-**Fase 0 — Auditoria Arquitetural da Camada Bronze (Status: Em Andamento)**
-- **Objetivo**: Garantir que a fundação suporte a ingestão massiva de 10+ anos.
-- **Ações**: Implementar a segmentação lógica entre `Raw` e `Normalized`; Padronizar a estrutura de pastas (`/sistema/year=YYYY/month=MM/`); Garantir metadados universais e naming conventions.
-
-**Fase 1 — Expansão da Camada Bronze**
-- **Objetivo**: Ingestão completa de todas as bases estruturantes adicionais.
-- **Ações**: Construir pipelines resilientes (Polars/dlt) para SIAPEcad, SIGEPE, SouGov Currículos, Pesquisa Vozes e Base DEPRO, salvando em Parquet particionado com hashing LGPD aplicado.
-
-**Fase 2 — Estabilização da Ingestão**
-- **Objetivo**: Confiabilidade operacional antes de ir para a nuvem
-- **Ações**: Validação de ***contract drift*** (mudanças repentinas de colunas na origem do Governo), controle de volumetria e consolidação de logs estruturados (JSON).
-
-**Fase 3 — Orquestração de Pipelines**
-- **Objetivo**: Automatizar execução e gerenciar dependências.
-- **Ações**: Implementar o **Dagster** como orquestrador central. Habilitar agendamentos (`scheduling`), retries automáticos para APIs instáveis e processamento de histórico massivo (Backfill).
-
-**Fase 4 — Infraestrutura como Código e CI/CD (DataOps)**
-- **Objetivo**: Gerenciar a infraestrutura cloud de forma auditável e automatizar o ciclo de vida do dado.
-- **Ações (Terraform)**: Criar `buckets` do Data Lake, datasets do BigQuery e Service Accounts via código.
-- **Ações (GitHub Actions - CI/CD)**:
-    - ***Integração Contínua (CI)***: Gatilho automático a cada Pull Request rodando testes de schema (`dbt test`).
-    - ***Entrega Contínua (CD)***: Deploy automatizado de modelos SQL para produção. Gerenciamento de senhas pelo GitHub Secrets e Secret Manager.
-
-**Fase 5 — Reconstrução da Camada Silver (Prata)**
-- **Objetivo**: Reestruturar os modelos intermediários usando o `dbt Core` para as 6 novas fontes.
-- **Ações**: Construir `staging` padronizado, cruzar fontes usando a chave universal `hash_cpf`, aplicar deduplicação técnica avançada e validar a qualidade dos dados.
-
-**Fase 6 — Reconstrução da Camada Gold (Ouro)**
-- **Objetivo**: Modelar os Data Marts definitivos para consumo no Power BI.
-- **Ações**: Consolidar tabelas OBT (One Big Table) para os temas: Trajetórias Funcionais, Diversidade, Aposentadorias, Capacitação e Clima Organizacional.
-
-**Fase 7 — Observabilidade e FinOps**
-- **Objetivo**: Monitoramento de saúde e custos em produção.
-- **Ações**: Dashboards de custo do BigQuery, alertas de latência/falha de pipelines e acompanhamento de data drift.
-
-**Fase 8 — Evolução Lakehouse (Visão Futura)**
-- **Objetivo**: Aprimorar a integração direta entre Storage e Data Warehouse.
-- **Ações**: Implementar `External Tables` no BigQuery lendo diretamente do Parquet no Cloud Storage (baixo custo de storage com alta performance de SQL).
+| Fase | Trilha | Descrição | Status | Atualizado em |
+|:-----|:-------|:----------|:------:|:-------------:|
+| Fase 0 | A | Auditoria Arquitetural da Camada Bronze | ✅ Concluída | Mar/2026 |
+| Fase 1 | A | Expansão da Camada Bronze | 🔄 Em andamento | Jun/2026 |
+| Fase 2 | A | Estabilização da Ingestão | ⏳ Pendente | — |
+| Fase 3 | A | Reconstrução da Camada Silver (dbt) | ⏳ Pendente | — |
+| Fase 4 | A | Reconstrução da Camada Gold (Data Marts) | ⏳ Pendente | — |
+| Fase 5 | A | Infraestrutura como Código e CI/CD | ⏳ Pendente | — |
+| Fase 6 | A | Observabilidade e FinOps | ⏳ Pendente | — |
+| Bloco 1 | B | Estudos: Remuneração e Trajetórias (Edital 02) | ⏳ Aguarda Gold | — |
+| Bloco 2 | C | Estudos: Competências e Diversidade (Edital 04) | ⏳ Aguarda Gold | — |
+| Bloco 3 | D | Supervisão e Integração Final (Edital 03) | ⏳ Aguarda B e C | — |
 
 ---
 
-## 2.2 Gestão de Riscos Técnicos e Mitigações
+### 3.2 Detalhamento por Fase
+
+---
+
+#### TRILHA A — Plataforma de Dados (Edital 01)
+
+---
+
+##### ✅ Fase 0 — Auditoria Arquitetural da Camada Bronze
+**Objetivo:** Garantir que a fundação suporte ingestão massiva de 10+ anos de histórico.
+
+| Sprint | Entrega | Status |
+|:-------|:--------|:------:|
+| 0.1 | Divisão lógica Bronze Raw / Bronze Normalized | ✅ |
+| 0.2 | Padronização de estrutura de pastas (Hive Partitioning) | ✅ |
+| 0.3 | Motor de ingestão (Polars) com pseudonimização LGPD in-flight | ✅ |
+| 0.4 | Metadados universais e naming conventions (snake_case, Regex) | ✅ |
+| 0.5 | ADRs 009–014 registradas | ✅ |
+
+---
+
+##### 🔄 Fase 1 — Expansão da Camada Bronze
+**Objetivo:** Ingestão completa de todas as bases estruturantes com backfill histórico (2015–2026).
+
+| Sprint | Entrega | Status |
+|:-------|:--------|:------:|
+| 1.1 | Assets Dagster: SIAPE (ativos, remuneração, aposentados, afastamentos) | ✅ |
+| 1.2 | Assets Dagster: DEPRO (alocação, cargos, aposentadorias) | ✅ |
+| 1.3 | Asset Dagster: ENAP (matrículas) com dupla descompactação TAR.GZ | ✅ |
+| 1.4 | Particionamento mensal: 136 partições por asset (2015-01 a 2026-04) | ✅ |
+| 1.5 | Integração GCS: motor de ingestão com destino configurável via `.env` | ✅ |
+| 1.6 | Bucket `gov-datalake-analytics-bronze` provisionado (us-east1, Standard) | ✅ |
+| 1.7 | Teste de escrita GCS validado: SIAPE Ativos jan/2025 (55MB raw + 55MB normalized) | ✅ |
+| 1.8 | Backfill histórico completo — 8 assets × 136 partições | 🔄 Em execução |
+| 1.9 | Assets: Observatório de Pessoal, PEP, ACT Lemann | ⏳ Pendente |
+| 1.10 | Estratégia de backfill ENAP histórico (URL com data variável) | ⏳ Pendente |
+| 1.11 | Merge branch `feature/integracao-gcs` na main | ⏳ Aguarda backfill |
+
+**Bloqueios ativos:**
+- Disponibilidade da base ACT Lemann não confirmada
+- URL histórica ENAP contém prefixo de data variável — requer estratégia específica
+
+---
+
+##### ⏳ Fase 2 — Estabilização da Ingestão
+**Objetivo:** Confiabilidade operacional antes de promover dados para Silver.
+
+Entregas previstas: validação de contract drift (mudanças de schema na origem), controle de volumetria, logs estruturados (JSON), correção do bug de dual logging.
+
+**Dependência:** Fase 1 concluída.
+
+---
+
+##### ⏳ Fase 3 — Reconstrução da Camada Silver (dbt)
+**Objetivo:** Limpeza técnica, tipagem estrita, deduplicação e integração entre fontes.
+
+Entregas previstas: staging padronizado por fonte, cruzamento via `hash_cpf`, deduplicação com `ROW_NUMBER`, dbt tests (Unique, Not Null, Accepted Values), resolução ADR-009 (chave `id_servidor_portal` vs `hash_cpf`).
+
+**Dependência:** Fase 2 concluída.
+
+---
+
+##### ⏳ Fase 4 — Reconstrução da Camada Gold (Data Marts)
+**Objetivo:** Modelos analíticos definitivos para consumo nos estudos e no Power BI.
+
+Entregas previstas: OBT por tema (Trajetórias, Remuneração, Diversidade, Competências, Aposentadorias, Capacitação), particionamento `PARTITION BY mes_referencia`, clustering `CLUSTER BY orgao, uf, hash_cpf`, decisão FinOps External Tables vs tabelas nativas (ADR pendente).
+
+**Dependência:** Fase 3 concluída.
+
+---
+
+##### ⏳ Fase 5 — Infraestrutura como Código e CI/CD
+**Objetivo:** Gerenciar infraestrutura GCP de forma auditável e automatizar o ciclo de vida do dado.
+
+Entregas previstas: Terraform para buckets, datasets e Service Accounts; GitHub Actions para CI (dbt test em PRs) e CD (deploy para produção); GitHub Secrets e Secret Manager.
+
+**Dependência:** Fase 4 concluída.
+
+---
+
+##### ⏳ Fase 6 — Observabilidade e FinOps
+**Objetivo:** Monitoramento de saúde, qualidade e custos em produção.
+
+Entregas previstas: dashboards de custo BigQuery, alertas de latência e falha de pipelines, monitoramento de data drift.
+
+**Dependência:** Fase 5 concluída.
+
+---
+
+#### TRILHA B — Estudos Analíticos: Remuneração e Trajetórias (Edital 02)
+
+**Dependência:** Gold (Fase 4 da Trilha A) concluída.
+
+| Produto | Descrição | Status |
+|:--------|:----------|:------:|
+| Produto 1 | Relatório de Diagnóstico e Formulação Analítica | ⏳ Pendente |
+| Produto 2 | Relatório de Fundamentação Teórico-Conceitual | ⏳ Pendente |
+| Produto 3 | Plano de Trabalho e Metodologia Validada | ⏳ Pendente |
+| Produto 4 | Estudo 1: Trajetórias no SPF — Análise de Coorte (sobrevivência, Markov) | ⏳ Pendente |
+| Produto 5 | Estudo 2: Modelagem Preditiva de Gastos com Pessoal e Aposentadorias | ⏳ Pendente |
+| Produto 6 | Estudo 3: Fluxos e Fronteiras — Mobilidade Funcional e Institucional | ⏳ Pendente |
+| Produto 7 | Estudo 4: Contratações Temporárias — Séries Temporais e Quebras Estruturais | ⏳ Pendente |
+| Produto 8 | Relatório Final e Recomendações Estratégicas | ⏳ Pendente |
+
+---
+
+#### TRILHA C — Estudos Analíticos: Competências e Diversidade (Edital 04)
+
+**Dependência:** Gold (Fase 4 da Trilha A) concluída. Paralela à Trilha B.
+
+| Produto | Descrição | Status |
+|:--------|:----------|:------:|
+| Produto 1 | Relatório de Diagnóstico e Formulação Analítica | ⏳ Pendente |
+| Produto 2 | Relatório de Fundamentação Teórico-Conceitual | ⏳ Pendente |
+| Produto 3 | Plano de Trabalho e Metodologia Validada | ⏳ Pendente |
+| Produto 4 | Estudo 1: Competências no SPF — Mapeamento, Alinhamento e Lacunas | ⏳ Pendente |
+| Produto 5 | Estudo 2: Competências para Entregar Resultados — Alinhamento Estratégico | ⏳ Pendente |
+| Produto 6 | Estudo 3: Diversidade e Desigualdades — Análise Interseccional | ⏳ Pendente |
+| Produto 7 | Estudo 4: Quem Lidera o Estado? — Perfil e Diversidade das Lideranças | ⏳ Pendente |
+| Produto 8 | Relatório Final e Recomendações Estratégicas | ⏳ Pendente |
+
+---
+
+#### TRILHA D — Supervisão e Integração Final (Edital 03)
+
+**Dependência:** Trilhas B e C concluídas. Não iniciada.
+
+Papel: supervisão técnica da integração dos resultados analíticos das Trilhas B e C, validação metodológica final e entrega consolidada ao MGI/SETE/PNUD.
+
+---
+
+## 4. Próximos Passos
+
+Ações imediatas desbloqueadas hoje (Jun/2026):
+
+1. **Backfill controlado SIAPE Ativos** — disparar 12 partições de 2025 via Dagster, monitorar comportamento (memória, rate limiting, tempo por partição)
+2. **Expandir backfill** — após validação, executar os outros 7 assets gradualmente
+3. **Merge** — após backfill completo, mergear `feature/integracao-gcs` na main
+4. **Novos assets** — iniciar levantamento das bases Observatório de Pessoal e PEP
+5. **Atualizar Notion** — sincronizar Roadmap de Fases e Tracker de Actions com este documento
+
+---
+
+## 5. Pendências Estratégicas de Longo Prazo
+
+| Pendência | Contexto |
+|:----------|:---------|
+| Produto 1 — Edital 01 | Relatório de diagnóstico das bases não foi formalmente finalizado. Sessão de Documentação Reversa planejada ao final da Camada Gold. |
+| ADR-009 | Status "Proposto". Aguarda inspeção completa de todas as fontes da Fase 1 para promoção a "Aceito". |
+| Estratégia ENAP histórico | URL por ano contém prefixo de data variável. Requer solução específica antes do backfill histórico. |
+| Disponibilidade ACT Lemann | Acesso à base não confirmado. |
+
+---
+
+## 6. Gestão de Riscos Técnicos e Mitigações
 
 |Risco Técnico | Impacto | Mitigação Implementada |
 |:--- |:--- |:--- |
 | **Bloqueio por Rate Limit (Erro 403)** | Alto | Pausas estruturadas e headers simulando navegadores reais. |
 | **Inconsistência de schemas (Colunas)** | Médio | Filtro `Regex (Whitelist)` e isolamento da camada Bronze Normalized. |
-| **Estouro de Memória (OOM)** | Alto | "Uso do motor vetorizado Polars, processando gigabytes sem esgotar a RAM." |
-| **Instabilidade de APIs (Timeouts)** | Alto | Framework `dlt` com blocos `try...except` e `Graceful Degradation`. |
+| **Estouro de Memória (OOM)** | Alto | Motor vetorizado Polars — processamento colunar in-memory sem carregar o arquivo inteiro na RAM. |
+| **Instabilidade de APIs e Firewalls (Timeouts, Erros 5xx)** | Alto | Blocos `try...except` e Graceful Degradation no motor de ingestão próprio. |
 | **Duplicidade de registros** | Médio | "Chave composta, particionamento `Overwrite` e `dbt tests`." |
 | **Custo excessivo de processamento** | Alto | `Hive Partitioning` no Data Lake e `Clustering` no BigQuery (FinOps). |
+| **Mudança de schema na origem (Contract Drift)** | Médio | Detecção planejada para Fase 2 — validação de colunas a cada ingestão. |
 
 ---
 
-## 2.3 Princípios Arquiteturais Norteadores
-1. **Segurança First**: Pseudonimização irreversível (LGPD) aplicada `in-flight`, antes da persistência em disco ou nuvem.
-
-2. **Arquitetura ELT**: Transformação (Regras de Negócio) realizada estritamente após o carregamento bruto no Data Warehouse.
-
-3. **Idempotência Máxima**: Garantia de que reprocessar o pipeline 100 vezes gerará exatamente o mesmo resultado, sem duplicidade de dados.
-
-4. **Analytics as Code**: Todo o fluxo (infraestrutura, extração, transformação e orquestração) é versionado em repositório Git.
+*Documento de estado do projeto — atualizar a cada sessão de trabalho.*  
+*Para visão arquitetural e decisões técnicas, consulte `PROPOSTA_ARQUITETURA_MAPEAMENTO.md` e os ADRs em `docs/adr/`.*
+---
