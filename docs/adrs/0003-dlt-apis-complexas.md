@@ -2,7 +2,7 @@
 
 **Data:** 2026-02-25
 
-**Status:** Aceito  
+**Status:** Superseded — substituído por ADR-001 (Polars in-memory) e ADR-015 (Motor de Ingestão Próprio)  
 
 **Decisores:** Ediney Magalhães (Data Engineer)
 
