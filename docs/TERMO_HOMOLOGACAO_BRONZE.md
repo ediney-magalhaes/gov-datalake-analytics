@@ -56,14 +56,14 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | Asset | Arquivos Raw | Tamanho Raw (GB) | Registros | Status |
 |:------|:-----------:|:----------------:|:---------:|:------:|
 | siape_ativos | 132 | 6,90 | 100.659.967 | ✅ Concluído |
-| siape_remuneracao | — | — | — | ⏳ Pendente |
+| siape_remuneracao | 132 | 4.46 | 68.693.388 | ✅ Concluído |
 | siape_aposentados | — | — | — | ⏳ Pendente |
 | siape_afastamentos | — | — | — | ⏳ Pendente |
 | depro_alocacao | — | — | — | ⏳ Pendente |
 | depro_cargos | — | — | — | ⏳ Pendente |
 | depro_aposentadorias | — | — | — | ⏳ Pendente |
 | enap_capacitacao | — | — | — | ⏳ Pendente |
-| **Total** | **132** | **6,90** | **100.659.967** | — |
+| **Total** | **264** | **11,36** | **169.353.355** | — |
 
 ---
 
@@ -72,7 +72,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | Asset | Período | Partições Raw | Partições Normalized | Status |
 |:------|:--------|:-------------:|:--------------------:|:------:|
 | siape_ativos | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
-| siape_remuneracao | 2015–2025 | — | — | ⏳ Pendente |
+| siape_remuneracao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_aposentados | 2015–2025 | — | — | ⏳ Pendente |
 | siape_afastamentos | 2015–2025 | — | — | ⏳ Pendente |
 | depro_alocacao | 2015–2025 | — | — | ⏳ Pendente |
