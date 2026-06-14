@@ -24,13 +24,14 @@ Responsável pela captura fiel dos dados da origem, preservando a rastreabilidad
 - **Bronze Normalized:** Padronização estrutural universal (conversão para `snake_case`, tipagem básica, adição de metadados como `ingestion_timestamp` e `source_system`, e harmonização da chave `hash_cpf`). Evita que a camada Prata gaste processamento com "higiene estrutural".
 
 ### Características Técnicas:
-- **Motores de Extração Híbridos:** Uso do motor **Polars** (Apache Arrow) para processamento vetorizado in-memory de arquivos massivos (ZIP/CSV), e do framework **dlt (Data Load Tool)** para extração automatizada e resiliente de APIs governamentais.
-- **Persistência Física (Data Lake):** O dado pousa primeiramente no formato colunar **Parquet**, garantindo alta compressão (~80%).
+- **Motor de Extração:** Uso do motor próprio baseado em **Polars** (Apache Arrow) para processamento vetorizado in-memory de arquivos massivos (ZIP/CSV) e **Requests** para download HTTP resiliente com headers dinâmicos. Decisão registrada em ADR-015.
+- **Orquestração:** **Dagster 1.13.2** como orquestrador central, com assets particionados mensalmente (2015–2026) e suporte a backfill histórico. Decisão registrada em ADR-012.
+- **Persistência Física (Data Lake):** O dado pousa primeiramente no **Google Cloud Storage (GCS)** no formato colunar **Parquet**, garantindo alta compressão (~80%). Decisão registrada em ADR-014.
     - A organização física segue o padrão **Hive Partitioning (year=YYYY/month=MM)**, visando otimização de scans (Partition Pruning) e redução drástica de custos no BigQuery (FinOps).
-- **Governança Operacional e Resiliência:** Rastreabilidade ponta a ponta garantida por **Dual Logging** (Terminal + arquivo físico `.log`). Falhas no firewall do Governo são mitigadas com tratamento de exceções (`try...except`) e *Graceful Degradation*.
+- **Governança Operacional e Resiliência:** Rastreabilidade ponta a ponta garantida por logging estruturado. Falhas no firewall do Governo são mitigadas com tratamento de exceções (`try...except`) e *Graceful Degradation*.
 
 ### Segurança (LGPD):
-- Pseudonimização determinística (SHA-256) aplicada in-flight no CPF, **utilizando um 'Salt' criptográfico estático (gerenciado via variáveis de ambiente** `.env`) para mitigar riscos de engenharia reversa e ataques de força bruta.
+- Pseudonimização determinística (SHA-256) aplicada in-flight no CPF, **utilizando um 'Salt' criptográfico estático (gerenciado via variáveis de ambiente** `.env`) para mitigar riscos de engenharia reversa e ataques de força bruta. Decisão registrada em ADR-013.
 
 ---
 
@@ -50,15 +51,15 @@ Execução sistemática de dbt tests (Unique, Not Null, Accepted Values) em cada
 
 ## 4. Camada Ouro — Consumo e Otimização (FinOps)
 
-Modelo totalmente implementado e otimizado para alta performance analítica no Google BigQuery.
+Planejada para alta performance analítica no Google BigQuery, atendendo aos blocos temáticos dos Editais 02 e 04.
 
 ### Estratégia de Modelagem e Integração:
 - **OBT (One Big Table):** Adoção de tabelas analíticas consolidadas para reduzir a complexidade e o custo de JOINs no Power BI.
-- **Integração Multi-fontes:** Cruzamento validado entre as bases do SIAPE e ENAP, garantido por chaves criptografadas unificadas (`hash_cpf`).
+- **Integração Multi-fontes:** Cruzamento entre as bases do SIAPE, DEPRO e ENAP, garantido por chaves criptografadas unificadas (`hash_cpf`).
 
 ### Estratégia Colunar e FinOps:
-- **Materialização Física:** As tabelas finais (*Data Marts*) foram materializadas fisicamente como `table` via dbt. Isso garante alta performance de leitura e previsibilidade de custos na nuvem, evitando o recálculo a cada consulta.
-- **Particionamento e Clustering (Planejado para escala):** Adoção de `PARTITION BY mes_referencia` para otimização de scans (Partition Pruning) e `CLUSTER BY orgao, uf, hash_cpf` para acelerar filtros de busca.
+- **Materialização Física:** As tabelas finais (*Data Marts*) serão materializadas fisicamente como `table` via dbt. Isso garante alta performance de leitura e previsibilidade de custos na nuvem, evitando o recálculo a cada consulta.
+- **Particionamento e Clustering:** Adoção de `PARTITION BY mes_referencia` para otimização de scans (Partition Pruning) e `CLUSTER BY orgao, uf, hash_cpf` para acelerar filtros de busca.
 
 ### Governança e Qualidade:
 - Contratos de dados e auditoria de qualidade (dbt tests) são aplicados no momento da transformação final, bloqueando inconsistências (ex: status fora do padrão ou nulos não tratados) antes da disponibilização no Data Lake.
@@ -80,14 +81,17 @@ A arquitetura prevê a implementação de integração e entrega contínua via G
 
 ---
 
+## 6. Gestão de Riscos Técnicos e Mitigações
+
 | Risco Técnico | Impacto | Mitigação Implementada |
 |:--- |:--- |:--- |
 | Bloqueio por Rate Limit (Erro 403) | Alto | Pausas estruturadas e headers simulando navegadores reais. |
 | Inconsistência de nomes de colunas | Médio | Filtro de Regex (Whitelist) permitindo apenas caracteres alfanuméricos e _. |
-| Estouro de Memória (OOM) | Alto | Substituição do Pandas pelo motor vetorizado Polars (escrito em Rust/Apache Arrow), triturando gigabytes sem esgotar a RAM local. |
-| Instabilidade de APIs Governamentais | Alto | Uso do framework `dlt` combinado com blocos `try...except` para captura de erros de rede (Timeouts) e *Graceful Degradation* (entrega de listas vazias em vez de quebrar o pipeline). |
+| Estouro de Memória (OOM) | Alto | Motor vetorizado Polars (Apache Arrow) — processamento colunar in-memory sem carregar o arquivo inteiro na RAM. |
+| Instabilidade de APIs Governamentais | Alto | Blocos `try...except` no motor de ingestão próprio para captura de erros de rede (Timeouts) e *Graceful Degradation*. |
 | Duplicidade de registros | Médio | Chave composta e testes de unicidade automatizados no dbt. |
 | Custo excessivo de processamento | Médio | Estratégias de particionamento e agrupamento físico no BigQuery. |
+| Mudança de schema na origem (Contract Drift) | Médio | Detecção planejada para Fase 2 — validação de colunas a cada ingestão. |
 
 ---
 
