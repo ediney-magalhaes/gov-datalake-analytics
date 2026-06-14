@@ -53,7 +53,7 @@ def siape_remuneracao(context):
     """Remuneração de servidores ativos — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[4:7]
+    mes = chave[5:7]
     ingestao_bronze_raw_zip(
         sistema='siape_remuneracao',
         ano=ano, mes=mes,
@@ -74,7 +74,7 @@ def siape_aposentados(context):
     """Cadastro de aposentados e pensionistas — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[4:7]
+    mes = chave[5:7]
     ingestao_bronze_raw_zip(
         sistema='siape_aposentados',
         ano=ano, mes=mes,
@@ -95,7 +95,7 @@ def siape_afastamentos(context):
     """Afastamentos de servidores ativos — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[4:7]
+    mes = chave[5:7]
     ingestao_bronze_raw_zip(
         sistema='siape_afastamentos',
         ano=ano, mes=mes,
