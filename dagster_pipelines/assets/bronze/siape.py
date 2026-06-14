@@ -75,10 +75,14 @@ def siape_aposentados(context):
     chave = context.partition_key
     ano = chave[:4]
     mes = chave[5:7]
+    if int(ano) < 2020:
+        url=f'https://portaldatransparencia.gov.br/download-de-dados/servidores/{ano}{mes}_Servidores_SIAPE'
+    else:
+        url=f'https://portaldatransparencia.gov.br/download-de-dados/servidores/{ano}{mes}_Aposentados_SIAPE'
     ingestao_bronze_raw_zip(
         sistema='siape_aposentados',
         ano=ano, mes=mes,
-        url_download=f'https://portaldatransparencia.gov.br/download-de-dados/servidores/{ano}{mes}_Aposentados_SIAPE',
+        url_download= url, 
         nome_arquivo_interno=f'{ano}{mes}_Cadastro.csv'
     )
     normalizacao_da_bronze_raw(sistema='siape_aposentados', ano=ano, mes=mes)
