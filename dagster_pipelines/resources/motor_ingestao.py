@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 load_dotenv()
 salt = os.getenv('HASH_SALT')
 destino_bronze = os.getenv('DESTINO_BRONZE')
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "service_account.json"
 
 def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_interno, separador=';', encoding='latin1', formato_compactado='zip'):
     """Baixa arquivo compactado, extrai CSV, anonimiza CPF e salva como Parquet particionado na Bronze Raw."""
