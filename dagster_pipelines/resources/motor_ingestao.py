@@ -7,6 +7,7 @@ import tarfile
 import polars as pl
 import logging
 import hashlib
+import gcsfs
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -71,6 +72,13 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
      #criando caminho da partição (Bronze Raw)
     caminho_particao = f'{destino_bronze}/bronze_raw/{sistema}/year={ano}/month={mes}'
     
+    #verificação de idempotência (se Raw já existe - pula)
+    if caminho_particao.startswith("gs://"):
+        fs = gcsfs.GCSFileSystem()
+        if fs.exists(f'{caminho_particao}/part-000.parquet'):
+            logging.info(f'Raw já existe para {sistema} {ano}/{mes}. Pulando download')
+            return
+
     #verificando caminho
     if not caminho_particao.startswith("gs://"):
         #criando diretorio
@@ -104,6 +112,13 @@ def normalizacao_da_bronze_raw(sistema, ano, mes):
 
     # estabelecendo pasta de destino bronze_normalized
     caminho_destino_pasta = f'{destino_bronze}/bronze_normalized/{sistema}/year={ano}/month={mes}'
+
+    #verificação de idempotência (se já existe - pula)
+    if caminho_destino_pasta.startswith("gs://"):
+        fs = gcsfs.GCSFileSystem()
+        if fs.exists(f'{caminho_destino_pasta}/part-000.parquet'):
+            logging.info(f'Normalize já existe para {sistema} {ano}/{mes}. Pulando.')
+            return
 
     # lendo arquivo parquet
     df_normalizado = pl.read_parquet(caminho_origem)
