@@ -4,7 +4,7 @@
 **Contrato:** PNUD BRA/21/011 — MGI/SETE/SGP  
 **Fase:** Camada Bronze — Ingestão e Persistência Histórica  
 **Status:** Em andamento — backfill parcial concluído  
-**Última atualização:** 13/06/2026
+**Última atualização:** 21/06/2026
 
 ---
 
@@ -56,14 +56,14 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | Asset | Arquivos Raw | Tamanho Raw (GB) | Registros | Status |
 |:------|:-----------:|:----------------:|:---------:|:------:|
 | siape_ativos | 132 | 6,90 | 100.659.967 | ✅ Concluído |
-| siape_remuneracao | 132 | 4.46 | 68.693.388 | ✅ Concluído |
-| siape_aposentados | — | — | — | ⏳ Pendente |
+| siape_remuneracao | 132 | 4,46 | 68.693.388 | ✅ Concluído |
+| siape_aposentados | 132 | 5,02 | 78.060.593 | ✅ Concluído |
 | siape_afastamentos | — | — | — | ⏳ Pendente |
 | depro_alocacao | — | — | — | ⏳ Pendente |
 | depro_cargos | — | — | — | ⏳ Pendente |
 | depro_aposentadorias | — | — | — | ⏳ Pendente |
 | enap_capacitacao | — | — | — | ⏳ Pendente |
-| **Total** | **264** | **11,36** | **169.353.355** | — |
+| **Total** | **396** | **16,38** | **247.413.948** | — |
 
 ---
 
@@ -73,7 +73,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 |:------|:--------|:-------------:|:--------------------:|:------:|
 | siape_ativos | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_remuneracao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
-| siape_aposentados | 2015–2025 | — | — | ⏳ Pendente |
+| siape_aposentados | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_afastamentos | 2015–2025 | — | — | ⏳ Pendente |
 | depro_alocacao | 2015–2025 | — | — | ⏳ Pendente |
 | depro_cargos | 2015–2025 | — | — | ⏳ Pendente |
@@ -88,8 +88,8 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 - **Caminhos validados:**
   - `bronze_raw/siape_ativos/year=YYYY/month=MM/part-000.parquet`
   - `bronze_normalized/siape_ativos/year=YYYY/month=MM/part-000.parquet`
-- **Orquestração:** Dagster 1.13.2 — 8 assets registrados, 137 partições mensais cada (2015-01 a 2026-05)
-- **Repositório:** branch `feature/integracao-gcs` — commit `91bc3a5`
+- **Orquestração:** Dagster 1.13.2 — 8 assets registrados, 132 partições mensais cada (2015-01 a 2025-12)
+- **Repositório:** branch `main` (commits diretos pós-merge de `feature/integracao-gcs` e `refactor/dagster-home-idempotencia-granular-motor`)
 - **ADRs relacionadas:** ADR-007, ADR-008, ADR-012, ADR-013, ADR-014
 
 ---
