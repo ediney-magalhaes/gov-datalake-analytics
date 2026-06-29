@@ -32,7 +32,7 @@ def siape_ativos(context):
 #    """Cadastro de servidores ativos — Bronze Raw e Normalized"""
 #    chave = context.partition_key
 #    ano = chave[:4]
-#    mes = chave[4:7]
+#    mes = chave[5:7]
 #    ingestao_bronze_raw_zip(
 #        sistema='siape_ativos',
 #        ano=ano, mes=mes,
