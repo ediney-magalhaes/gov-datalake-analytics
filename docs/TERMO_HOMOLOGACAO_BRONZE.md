@@ -99,3 +99,18 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 - **Arquiteto/Engenheiro de Dados:** Ediney Magalhães Junior
 - **Validação Técnica:** Evidência registrada via inspeção do bucket GCS e interface Dagster
 - **Status Final:** Em andamento — homologação completa será emitida ao término do backfill histórico de todos os 8 assets
+
+---
+
+## 8. Riscos Conhecidos e Limitações Operacionais
+
+### 8.1 Limitação de RAM (Concorrência)
+**Sintoma:** `zipfile.BadZipFile` ao disparar múltiplas partições simultâneas.
+**Causa:** Hardware local com 8GB RAM; execução concorrente de múltiplos processos do Dagster excede a memória disponível.
+**Mitigação:** Configuração de `QueuedRunCoordinator` (max_concurrent_runs=1) via `DAGSTER_HOME` local (27/06/2026) — escopo cirúrgico de desbloqueio, não a migração completa de infraestrutura prevista na Fase 5.
+
+### 8.2 Cooldown do Portal da Transparência
+**Sintoma:** `zipfile.BadZipFile` em execuções rápidas (~7s), mesmo com concorrência limitada a 1.
+**Causa:** Bloqueio temporário do servidor após múltiplas requisições consecutivas em curto intervalo (anti-bot).
+**Mitigação:** Disparo em lotes de no máximo 6 partições, com pausa de alguns minutos entre lotes. Aplicável a todos os backfills futuros via Portal da Transparência (DEPRO, ENAP).
+**Identificado em:** 27/06/2026, durante backfill de `siape_afastamentos`.
