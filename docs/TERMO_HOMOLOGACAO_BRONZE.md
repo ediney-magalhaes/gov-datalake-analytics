@@ -58,12 +58,12 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_ativos | 132 | 6,90 | 100.659.967 | ✅ Concluído |
 | siape_remuneracao | 132 | 4,46 | 68.693.388 | ✅ Concluído |
 | siape_aposentados | 132 | 5,02 | 78.060.593 | ✅ Concluído |
-| siape_afastamentos | — | — | — | ⏳ Pendente |
+| siape_afastamentos | 129 | 0,42 | 9.298.655 | ✅ Concluído |
 | depro_alocacao | — | — | — | ⏳ Pendente |
 | depro_cargos | — | — | — | ⏳ Pendente |
 | depro_aposentadorias | — | — | — | ⏳ Pendente |
 | enap_capacitacao | — | — | — | ⏳ Pendente |
-| **Total** | **396** | **16,38** | **247.413.948** | — |
+| **Total** | **525** | **16,8** | **256.712.603** | — |
 
 ---
 
@@ -74,7 +74,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_ativos | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_remuneracao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_aposentados | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
-| siape_afastamentos | 2015–2025 | — | — | ⏳ Pendente |
+| siape_afastamentos | 04/2015–2025 | 129/132 | 129/132 | ✅ Concluído |
 | depro_alocacao | 2015–2025 | — | — | ⏳ Pendente |
 | depro_cargos | 2015–2025 | — | — | ⏳ Pendente |
 | depro_aposentadorias | 2015–2025 | — | — | ⏳ Pendente |
