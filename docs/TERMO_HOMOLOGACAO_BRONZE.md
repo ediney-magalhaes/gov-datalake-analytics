@@ -62,8 +62,8 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | depro_alocacao | — | — | — | ⏳ Pendente |
 | depro_cargos | — | — | — | ⏳ Pendente |
 | depro_aposentadorias | — | — | — | ⏳ Pendente |
-| enap_capacitacao | — | — | — | ⏳ Pendente |
-| **Total** | **525** | **16,8** | **256.712.603** | — |
+| enap_capacitacao | 132 | 0,54 | 19.346.163 | ✅ Concluído |
+| **Total** | **657** | **17,34** | **276.058.766** | — |
 
 ---
 
@@ -78,7 +78,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | depro_alocacao | 2015–2025 | — | — | ⏳ Pendente |
 | depro_cargos | 2015–2025 | — | — | ⏳ Pendente |
 | depro_aposentadorias | 2015–2025 | — | — | ⏳ Pendente |
-| enap_capacitacao | 2015–2025 | — | — | ⏳ Pendente |
+| enap_capacitacao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 
 ---
 

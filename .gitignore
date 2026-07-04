@@ -22,3 +22,4 @@ __pycache__/
 # Dagster Home Local (runtime, não versionar)
 dagster_home_local/*
 !dagster_home_local/dagster.yaml
+data_lake_local/cache/
