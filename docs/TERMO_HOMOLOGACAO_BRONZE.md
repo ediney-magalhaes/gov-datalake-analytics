@@ -59,11 +59,11 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_remuneracao | 132 | 4,46 | 68.693.388 | ✅ Concluído |
 | siape_aposentados | 132 | 5,02 | 78.060.593 | ✅ Concluído |
 | siape_afastamentos | 129 | 0,42 | 9.298.655 | ✅ Concluído |
-| depro_alocacao | — | — | — | ⏳ Pendente |
+| depro_alocacao | 60 | < 0,01 | 11.466 | ⏳ Parcial |
 | depro_cargos | — | — | — | ⏳ Pendente |
 | depro_aposentadorias | — | — | — | ⏳ Pendente |
 | enap_capacitacao | 132 | 0,54 | 19.346.163 | ✅ Concluído |
-| **Total** | **657** | **17,34** | **276.058.766** | — |
+| **Total** | **717** | **17,34** | **276.070.232** | — |
 
 ---
 
@@ -75,7 +75,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_remuneracao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_aposentados | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_afastamentos | 04/2015–2025 | 129/132 | 129/132 | ✅ Concluído |
-| depro_alocacao | 2015–2025 | — | — | ⏳ Pendente |
+| depro_alocacao | 2020-02 -> 2026-02 (c/ gaps) | 60/78 | 60/78 | ⏳ Parcial |
 | depro_cargos | 2015–2025 | — | — | ⏳ Pendente |
 | depro_aposentadorias | 2015–2025 | — | — | ⏳ Pendente |
 | enap_capacitacao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
@@ -114,3 +114,21 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 **Causa:** Bloqueio temporário do servidor após múltiplas requisições consecutivas em curto intervalo (anti-bot).
 **Mitigação:** Disparo em lotes de no máximo 6 partições, com pausa de alguns minutos entre lotes. Aplicável a todos os backfills futuros via Portal da Transparência (DEPRO, ENAP).
 **Identificado em:** 27/06/2026, durante backfill de `siape_afastamentos`.
+
+### 8.3 Dataset DEPRO inexistente antes de fevereiro/2020
+**Sintoma:** `KeyError: 'alocacao-servidores.csv'` para a partição 2020-01.
+**Causa:** O Raio-X da Administração Pública Federal foi lançado em janeiro de 2020, mas a dimensão de pessoal (`alocacao-servidores.csv`, `cargos-efetivos.csv`, `projecao-aposentadorias.csv`) só foi incluída a partir de fevereiro de 2020. O ZIP de 2020-01 contém apenas dados orçamentários.
+**Impacto:** 1 partição indisponível por asset DEPRO. Série histórica inicia em 2020-02.
+**Decisão:** Limitação da fonte — não há dado alternativo disponível. Registrado como gap estrutural.
+
+### 8.4 Gap de publicação governamental — junho/2024 a junho/2025
+**Sintoma:** HTTP 404 para partições de 2024-06 a 2025-06.
+**Causa:** Interrupção de 13 meses na publicação dos ZIPs mensais do Raio-X, provavelmente associada à transição do Ministério da Economia para o MGI.
+**Impacto:** 13 partições indisponíveis por asset DEPRO.
+**Decisão:** Limitação da fonte — gap documentado, motor trata como skip silencioso via verificação de status 404.
+
+### 8.5 Descontinuação do formato ZIP a partir de março/2026
+**Sintoma:** `KeyError: 'alocacao-servidores.csv'` para partições de 2026-03 em diante.
+**Causa:** A partir de março/2026, o governo alterou o modelo de publicação — os ZIPs passaram a conter novos arquivos (`pessoal-forca-trabalho.csv`, `carreira-cargo-efetivo-orgao.csv` etc.) sem os arquivos históricos de pessoal.
+**Impacto:** Assets `depro_alocacao`, `depro_cargos` e `depro_aposentadorias` sem cobertura a partir de 2026-03.
+**Decisão:** Limitação estrutural da fonte. Os novos arquivos serão avaliados como potenciais novos assets na próxima fase.
