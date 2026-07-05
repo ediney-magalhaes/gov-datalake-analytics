@@ -60,10 +60,10 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_aposentados | 132 | 5,02 | 78.060.593 | ✅ Concluído |
 | siape_afastamentos | 129 | 0,42 | 9.298.655 | ✅ Concluído |
 | depro_alocacao | 60 | < 0,01 | 11.466 | ⏳ Parcial |
-| depro_cargos | — | — | — | ⏳ Pendente |
+| depro_cargos | 12 | < 0,01 | 142.404 | ⏳ Parcial |
 | depro_aposentadorias | — | — | — | ⏳ Pendente |
 | enap_capacitacao | 132 | 0,54 | 19.346.163 | ✅ Concluído |
-| **Total** | **717** | **17,34** | **276.070.232** | — |
+| **Total** | **729** | **17,34** | **276.212.636** | — |
 
 ---
 
@@ -76,7 +76,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_aposentados | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_afastamentos | 04/2015–2025 | 129/132 | 129/132 | ✅ Concluído |
 | depro_alocacao | 2020-02 -> 2026-02 (c/ gaps) | 60/78 | 60/78 | ⏳ Parcial |
-| depro_cargos | 2015–2025 | — | — | ⏳ Pendente |
+| depro_cargos | 2024-02 → 2026-02 (c/ gaps) | 12/78 | 12/78 | ⏳ Parcial |
 | depro_aposentadorias | 2015–2025 | — | — | ⏳ Pendente |
 | enap_capacitacao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 
@@ -132,3 +132,8 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 **Causa:** A partir de março/2026, o governo alterou o modelo de publicação — os ZIPs passaram a conter novos arquivos (`pessoal-forca-trabalho.csv`, `carreira-cargo-efetivo-orgao.csv` etc.) sem os arquivos históricos de pessoal.
 **Impacto:** Assets `depro_alocacao`, `depro_cargos` e `depro_aposentadorias` sem cobertura a partir de 2026-03.
 **Decisão:** Limitação estrutural da fonte. Os novos arquivos serão avaliados como potenciais novos assets na próxima fase.
+### 8.6 `cargos-efetivos.csv` inexistente no formato ZIP antes de fevereiro/2024
+**Sintoma:** `KeyError: 'cargos-efetivos.csv'` para todas as partições de 2020-02 a 2024-01.
+**Causa:** O arquivo `cargos-efetivos.csv` não fazia parte do formato original do Raio-X (v1.0.0 a v1.3.0). Foi incorporado ao pacote ZIP apenas a partir de fevereiro/2024, conforme verificado via inspeção do CHANGELOG.html e conteúdo dos ZIPs.
+**Impacto:** Série histórica do `depro_cargos` inicia em 2024-02 — apenas 12 partições disponíveis.
+**Decisão:** Limitação da fonte — não há dado alternativo disponível. Registrado como gap estrutural.
