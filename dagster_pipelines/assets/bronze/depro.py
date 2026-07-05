@@ -3,11 +3,11 @@ from dagster import asset, MonthlyPartitionsDefinition
 from dagster_pipelines.resources.motor_ingestao import ingestao_bronze_raw_zip, normalizacao_da_bronze_raw
 
 # Definição da partição mensal — de janeiro/2015 até o mês atual
-particao_mensal = MonthlyPartitionsDefinition(start_date="2015-01-01")
+particao_mensal = MonthlyPartitionsDefinition(start_date="2020-01-01")
 
 # Asset: depro_alocacao
 # O que faz: Baixa o registro de alocação dos servidores ativos do Portal da Transparência e salva como Parquet particionado por ano/mês
-# Partição: Mensal (2015-01 até o mês atual)
+# Partição: Mensal (2020-01 até o mês atual)
 # Fonte: ZIP público do Repositório de dados do governo
 # Arquivo interno: alocacao-servidores.csv
 # Separador: ; (padrão)
@@ -17,7 +17,7 @@ def depro_alocacao(context):
     """Alocação de servidores por órgão — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[5:7]
     ingestao_bronze_raw_zip(
         sistema='depro_alocacao',
         ano=ano, mes=mes,
@@ -38,7 +38,7 @@ def depro_cargos(context):
     """Cargos de servidores por órgão — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[5:7]
     ingestao_bronze_raw_zip(
         sistema='depro_cargos',
         ano=ano, mes=mes,
@@ -59,7 +59,7 @@ def depro_aposentadorias(context):
     """Projeção de aposentadorias por órgão — Bronze Raw e Normalized"""
     chave = context.partition_key
     ano = chave[:4]
-    mes = chave[5:]
+    mes = chave[5:7]
     ingestao_bronze_raw_zip(
         sistema='depro_aposentadorias',
         ano=ano, mes=mes,

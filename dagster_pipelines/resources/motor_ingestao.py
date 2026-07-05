@@ -29,6 +29,11 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
     logging.info(f'Iniciando o download dos dados do {sistema} para o periodo {ano}{mes}')
     resposta = requests.get(url_download, verify=False, headers=cabecalho, timeout=120)
 
+    #verificando o status de resposta
+    if resposta.status_code == 404:
+        logging.info(f"A partição {ano}/{mes} do sistema {sistema} não esta disponível. Pulando para a próxima partição...")
+        return
+    
     #abrindo o arquivos conforme formato
     arquivo_bytes = io.BytesIO(resposta.content)
     if formato_compactado == 'zip':
@@ -37,14 +42,14 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
     elif formato_compactado == 'tar.gz':
         with tarfile.open(fileobj=arquivo_bytes, mode='r:gz') as t:
             if isinstance(nome_arquivo_interno, list):
-            # Dupla descompactação: TAR.GZ dentro de TAR.GZ
-            # Passo 1: extrair o TAR.GZ intermediário
+            #dupla descompactação: TAR.GZ dentro de TAR.GZ
+            #extrai o TAR.GZ intermediário
                 conteudo_intermediario = io.BytesIO(t.extractfile(nome_arquivo_interno[0]).read())
-            # Passo 2: abrir o TAR.GZ intermediário e extrair o CSV final
+            #abre o TAR.GZ intermediário e extrair o CSV final
                 with tarfile.open(fileobj=conteudo_intermediario, mode='r:gz') as t2:
                     conteudo = t2.extractfile(nome_arquivo_interno[1]).read()
             else:
-            # Descompactação simples: TAR.GZ com CSV direto
+            #descompactação simples: TAR.GZ com CSV direto
                 conteudo = t.extractfile(nome_arquivo_interno).read()
 
     #lendo o arquivo com o Polars
@@ -88,7 +93,7 @@ def ingestao_bronze_raw_zip(sistema, ano, mes, url_download, nome_arquivo_intern
     df.write_parquet(f'{caminho_particao}/part-000.parquet')
     logging.info('Arquivo salvo com sucesso!')
 
-# Função auxiliar para garantir snake_case
+#função auxiliar para garantir snake_case
 def para_snake_case(texto):
     """Converte nome de coluna para snake_case."""
     texto = str(texto).strip().lower()
@@ -96,21 +101,25 @@ def para_snake_case(texto):
     texto = re.sub(r'[\s-]+', '_', texto)
     return texto
 
-# função para normalização das bases
+#função para normalização das bases
 def normalizacao_da_bronze_raw(sistema, ano, mes):
     """Lê Parquet da Bronze Raw, padroniza colunas e salva na Bronze Normalized."""
 
-    # definindo local de leitura dos dados
+    #definindo local de leitura dos dados
     caminho_origem = f'{destino_bronze}/bronze_raw/{sistema}/year={ano}/month={mes}/part-000.parquet'
 
-    #verificando caminho
-    if not caminho_origem.startswith("gs://"):
-        # verificando existencia do arquivo
+    #verificando existência do arquivo no GCS
+    if caminho_origem.startswith("gs://"):
+        fs = gcsfs.GCSFileSystem()
+        if not fs.exists(caminho_origem):
+            logging.info(f"A partição {ano}/{mes} do sistema {sistema} não existe!")
+            return
+    else:
         if not os.path.exists(caminho_origem):
             logging.error(f"Arquivo não encontrado na origem: {caminho_origem}")
             return
 
-    # estabelecendo pasta de destino bronze_normalized
+    #estabelecendo pasta de destino bronze_normalized
     caminho_destino_pasta = f'{destino_bronze}/bronze_normalized/{sistema}/year={ano}/month={mes}'
 
     #verificação de idempotência (se já existe - pula)
@@ -124,12 +133,12 @@ def normalizacao_da_bronze_raw(sistema, ano, mes):
     df_normalizado = pl.read_parquet(caminho_origem)
     logging.info(f'Lendo arquivo na origem: {sistema} ({ano}/{mes})')
 
-    # 1. Transformação do nome das colunas - snake_case
+    # Transformação do nome das colunas - snake_case
     mapeamento_colunas = {coluna: para_snake_case(coluna) for coluna in df_normalizado.columns}
     df_normalizado = df_normalizado.rename(mapeamento_colunas)
     logging.info('Colunas transformadas para snake_case com sucesso!')
 
-    # 2. Injeção de Metadados Universais (Arquitetura Fase 0)
+    # Injeção de Metadados Universais (Arquitetura Fase 0)
     df_normalizado = df_normalizado.with_columns([
         pl.lit(sistema).alias('source_system'),
         pl.lit(datetime.now()).alias('ingestion_timestamp'),
