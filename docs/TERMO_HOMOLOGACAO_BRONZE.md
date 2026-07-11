@@ -60,10 +60,10 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_aposentados | 132 | 5,02 | 78.060.593 | ✅ Concluído |
 | siape_afastamentos | 129 | 0,42 | 9.298.655 | ✅ Concluído |
 | depro_alocacao | 60 | < 0,01 | 11.466 | ⏳ Parcial |
-| depro_cargos | 12 | < 0,01 | 142.404 | ⏳ Parcial |
-| depro_aposentadorias | — | — | — | ⏳ Pendente |
+| depro_cargos | 12 | < 0,01 | 142.404 | ✅ Concluído |
+| depro_aposentadorias | 12 | < 0,01 | 257.547 | ✅ Concluído |
 | enap_capacitacao | 132 | 0,54 | 19.346.163 | ✅ Concluído |
-| **Total** | **729** | **17,34** | **276.212.636** | — |
+| **Total** | **741** | **17,34** | **276.470.183** | — |
 
 ---
 
@@ -76,8 +76,8 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 | siape_aposentados | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 | siape_afastamentos | 04/2015–2025 | 129/132 | 129/132 | ✅ Concluído |
 | depro_alocacao | 2020-02 -> 2026-02 (c/ gaps) | 60/78 | 60/78 | ⏳ Parcial |
-| depro_cargos | 2024-02 → 2026-02 (c/ gaps) | 12/78 | 12/78 | ⏳ Parcial |
-| depro_aposentadorias | 2015–2025 | — | — | ⏳ Pendente |
+| depro_cargos | 2024-02 → 2026-02 (c/ gaps) | 12/78 | 12/78 | ✅ Concluído |
+| depro_aposentadorias | 2024-02 → 2026-02 (c/ gaps) | 12/78 | 12/78 | ✅ Concluído |
 | enap_capacitacao | 2015–2025 | 132/132 | 132/132 | ✅ Concluído |
 
 ---
