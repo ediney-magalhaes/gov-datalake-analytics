@@ -3,8 +3,8 @@
 **Projeto:** Data Lake — Plataforma de Análise de Pessoal da Administração Pública Federal  
 **Contrato:** PNUD BRA/21/011 — MGI/SETE/SGP  
 **Fase:** Camada Bronze — Ingestão e Persistência Histórica  
-**Status:** Em andamento — backfill parcial concluído  
-**Última atualização:** 21/06/2026
+**Status:** Concluído — backfill histórico dos 8 assets finalizado
+**Última atualização:** 11/07/2026
 
 ---
 
@@ -98,7 +98,7 @@ Tabela atualizada progressivamente conforme conclusão do backfill histórico de
 
 - **Arquiteto/Engenheiro de Dados:** Ediney Magalhães Junior
 - **Validação Técnica:** Evidência registrada via inspeção do bucket GCS e interface Dagster
-- **Status Final:** Em andamento — homologação completa será emitida ao término do backfill histórico de todos os 8 assets
+- **Status Final:** Homologação completa — backfill histórico dos 8 assets da Camada Bronze concluído, respeitando os limites de disponibilidade documentados na Seção 8
 
 ---
 
