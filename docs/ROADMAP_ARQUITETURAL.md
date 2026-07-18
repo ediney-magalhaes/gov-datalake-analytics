@@ -1,7 +1,7 @@
 # Roadmap — Data Lake Analytics GOV
 ### Plataforma de Análise de Pessoal da Administração Pública Federal
 **Motivação:** PNUD BRA/21/011 — MGI/SETE/SGP  
-**Última atualização:** 13/06/2026
+**Última atualização:** 11/07/2026
 
 ---
 
@@ -48,7 +48,7 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 | Fase | Trilha | Descrição | Status | Atualizado em |
 |:-----|:-------|:----------|:------:|:-------------:|
 | Fase 0 | A | Auditoria Arquitetural da Camada Bronze | ✅ Concluída | Mar/2026 |
-| Fase 1 | A | Expansão da Camada Bronze | 🔄 Em andamento | Jun/2026 |
+| Fase 1 | A | Expansão da Camada Bronze | ✅ Concluída | Jul/2026 |
 | Fase 2 | A | Estabilização da Ingestão | ⏳ Pendente | — |
 | Fase 3 | A | Reconstrução da Camada Silver (dbt) | ⏳ Pendente | — |
 | Fase 4 | A | Reconstrução da Camada Gold (Data Marts) | ⏳ Pendente | — |
@@ -81,7 +81,7 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 
 ---
 
-##### 🔄 Fase 1 — Expansão da Camada Bronze
+##### ✅ Fase 1 — Expansão da Camada Bronze
 **Objetivo:** Ingestão completa de todas as bases estruturantes com backfill histórico (2015–2026).
 
 | Sprint | Entrega | Status |
@@ -93,14 +93,13 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 | 1.5 | Integração GCS: motor de ingestão com destino configurável via `.env` | ✅ |
 | 1.6 | Bucket `gov-datalake-analytics-bronze` provisionado (us-east1, Standard) | ✅ |
 | 1.7 | Teste de escrita GCS validado: SIAPE Ativos jan/2025 (55MB raw + 55MB normalized) | ✅ |
-| 1.8 | Backfill histórico completo — 8 assets × 136 partições | 🔄 Em execução |
+| 1.8 | Backfill histórico completo — 8 assets × 136 partições | ✅ |
 | 1.9 | Assets: Observatório de Pessoal, PEP, ACT Lemann | ⏳ Pendente |
-| 1.10 | Estratégia de backfill ENAP histórico (URL com data variável) | ⏳ Pendente |
-| 1.11 | Merge branch `feature/integracao-gcs` na main | ⏳ Aguarda backfill |
+| 1.10 | Backfill histórico ENAP — cache local + `pl.scan_csv()` lazy + download manual (bloqueio anti-bot do servidor) | ✅ |
+| 1.11 | Merge branch `feature/integracao-gcs` na main | ✅ |
 
 **Bloqueios ativos:**
 - Disponibilidade da base ACT Lemann não confirmada
-- URL histórica ENAP contém prefixo de data variável — requer estratégia específica
 
 ---
 
@@ -193,13 +192,12 @@ Papel: supervisão técnica da integração dos resultados analíticos das Trilh
 
 ## 4. Próximos Passos
 
-Ações imediatas desbloqueadas hoje (Jun/2026):
+Ações imediatas desbloqueadas hoje (Jul/2026):
 
-1. **Backfill controlado SIAPE Ativos** — disparar 12 partições de 2025 via Dagster, monitorar comportamento (memória, rate limiting, tempo por partição)
-2. **Expandir backfill** — após validação, executar os outros 7 assets gradualmente
-3. **Merge** — após backfill completo, mergear `feature/integracao-gcs` na main
-4. **Novos assets** — iniciar levantamento das bases Observatório de Pessoal e PEP
-5. **Atualizar Notion** — sincronizar Roadmap de Fases e Tracker de Actions com este documento
+1. **Decisão de sequenciamento** — definir se a Fase 2 (Estabilização) precede a Fase 3 (Silver/dbt Core), ou se os itens da Fase 2 são tratados como dívida técnica consciente e documentada
+2. **Sprint 1.9** — iniciar levantamento das bases Observatório de Pessoal, PEP e avaliar disponibilidade da ACT Lemann
+3. **Promoção da ADR-009** — condição de promoção cumprida (inspeção completa das fontes da Fase 1 concluída); atualizar status de "Proposto" para "Aceito"
+4. **Silver Layer** — iniciar modelagem dimensional Kimball e configuração do dbt Core, condicionada à decisão do item 1
 
 ---
 
@@ -208,8 +206,7 @@ Ações imediatas desbloqueadas hoje (Jun/2026):
 | Pendência | Contexto |
 |:----------|:---------|
 | Produto 1 — Edital 01 | Relatório de diagnóstico das bases não foi formalmente finalizado. Sessão de Documentação Reversa planejada ao final da Camada Gold. |
-| ADR-009 | Status "Proposto". Aguarda inspeção completa de todas as fontes da Fase 1 para promoção a "Aceito". |
-| Estratégia ENAP histórico | URL por ano contém prefixo de data variável. Requer solução específica antes do backfill histórico. |
+| ADR-009 | Condição de promoção cumprida — todas as fontes da Fase 1 inspecionadas. Pronta para promoção de "Proposto" para "Aceito" (ação a ser executada no arquivo `0009-estrategia-chave-universal-record-linkage.md`). |
 | Disponibilidade ACT Lemann | Acesso à base não confirmado. |
 
 ---
