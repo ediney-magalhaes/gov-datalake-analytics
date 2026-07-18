@@ -94,12 +94,14 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 | 1.6 | Bucket `gov-datalake-analytics-bronze` provisionado (us-east1, Standard) | ✅ |
 | 1.7 | Teste de escrita GCS validado: SIAPE Ativos jan/2025 (55MB raw + 55MB normalized) | ✅ |
 | 1.8 | Backfill histórico completo — 8 assets × 136 partições | ✅ |
-| 1.9 | Assets: Observatório de Pessoal, PEP, ACT Lemann | ⏳ Pendente |
+| 1.9 | Asset: PEP via Base dos Dados (BigQuery público) | ⏳ Pendente |
 | 1.10 | Backfill histórico ENAP — cache local + `pl.scan_csv()` lazy + download manual (bloqueio anti-bot do servidor) | ✅ |
 | 1.11 | Merge branch `feature/integracao-gcs` na main | ✅ |
 
 **Bloqueios ativos:**
-- Disponibilidade da base ACT Lemann não confirmada
+- Nenhum bloqueio técnico ativo na Fase 1.
+
+**Nota de escopo (18/07/2026):** Investigação confirmou que "Observatório de Pessoal" e "PEP" são a mesma fonte (o Observatório é o portal, o PEP é o dado); consolidados em um único item. "ACT Lemann" foi identificado como produto analítico pronto (resultado de Acordo de Cooperação Técnica MGI + Fundação Lemann), sem estrutura tabular ou chave de cruzamento — reclassificado como insumo do Produto 2 (Fundamentação Teórico-Conceitual, Edital 04) e removido do escopo de ingestão Bronze.
 
 ---
 
