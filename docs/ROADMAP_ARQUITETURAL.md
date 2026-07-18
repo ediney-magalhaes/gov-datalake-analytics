@@ -94,7 +94,7 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 | 1.6 | Bucket `gov-datalake-analytics-bronze` provisionado (us-east1, Standard) | ✅ |
 | 1.7 | Teste de escrita GCS validado: SIAPE Ativos jan/2025 (55MB raw + 55MB normalized) | ✅ |
 | 1.8 | Backfill histórico completo — 8 assets × 136 partições | ✅ |
-| 1.9 | Asset: PEP via Base dos Dados (BigQuery público) | ⏳ Pendente |
+| 1.9 | Asset: PEP via Base dos Dados (BigQuery público) | ⏳ Pendente — não-bloqueante |
 | 1.10 | Backfill histórico ENAP — cache local + `pl.scan_csv()` lazy + download manual (bloqueio anti-bot do servidor) | ✅ |
 | 1.11 | Merge branch `feature/integracao-gcs` na main | ✅ |
 
