@@ -49,8 +49,8 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 |:-----|:-------|:----------|:------:|:-------------:|
 | Fase 0 | A | Auditoria Arquitetural da Camada Bronze | ✅ Concluída | Mar/2026 |
 | Fase 1 | A | Expansão da Camada Bronze | ✅ Concluída | Jul/2026 |
-| Fase 2 | A | Estabilização da Ingestão | ⏳ Pendente | — |
-| Fase 3 | A | Reconstrução da Camada Silver (dbt) | ⏳ Pendente | — |
+| Fase 2 | A | Estabilização da Ingestão | ⏸️ Diferida (ADR-016) | Jul/2026 |
+| Fase 3 | A | Reconstrução da Camada Silver (dbt) | 🔄 Em andamento | Jul/2026 |
 | Fase 4 | A | Reconstrução da Camada Gold (Data Marts) | ⏳ Pendente | — |
 | Fase 5 | A | Infraestrutura como Código e CI/CD | ⏳ Pendente | — |
 | Fase 6 | A | Observabilidade e FinOps | ⏳ Pendente | — |
@@ -105,21 +105,31 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 
 ---
 
-##### ⏳ Fase 2 — Estabilização da Ingestão
+##### ⏸️ Fase 2 — Estabilização da Ingestão (Diferida)
 **Objetivo:** Confiabilidade operacional antes de promover dados para Silver.
 
-Entregas previstas: validação de contract drift (mudanças de schema na origem), controle de volumetria, logs estruturados (JSON), correção do bug de dual logging.
+Entregas previstas: validação de contract drift (mudanças de schema na origem), controle de volumetria, logs estruturados (JSON).
+
+**Status:** Diferida para execução em paralelo com a Fase 3, conforme ADR-016. Bug de dual logging corrigido separadamente (item pontual, não faz parte do diferimento). Retomada condicionada a: nova execução do pipeline de ingestão, ou necessidade identificada ao final da Camada Gold.
 
 **Dependência:** Fase 1 concluída.
 
 ---
 
-##### ⏳ Fase 3 — Reconstrução da Camada Silver (dbt)
-**Objetivo:** Limpeza técnica, tipagem estrita, deduplicação e integração entre fontes.
+##### 🔄 Fase 3 — Reconstrução da Camada Silver (dbt Core)
+**Objetivo:** Modelagem dimensional (Kimball) sobre a Camada Bronze homologada, aplicando a estratégia de chave definida na ADR-009.
 
-Entregas previstas: staging padronizado por fonte, cruzamento via `hash_cpf`, deduplicação com `ROW_NUMBER`, dbt tests (Unique, Not Null, Accepted Values), resolução ADR-009 (chave `id_servidor_portal` vs `hash_cpf`).
+| Sprint | Entrega | Status |
+|:-------|:--------|:------:|
+| 3.1 | Inicialização do projeto dbt Core — `profiles.yml` conectado ao BigQuery | ⏳ Pendente |
+| 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ⏳ Pendente |
+| 3.3 | Modelos de staging (`stg_`) — um por asset Bronze, aplicando `id_servidor_portal` e rehash SHA-256 na ENAP (ADR-009) | ⏳ Pendente |
+| 3.4 | Definição de testes dbt (`unique`, `not_null`, `relationships`) nos modelos de staging | ⏳ Pendente |
+| 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C | ⏳ Pendente |
 
-**Dependência:** Fase 2 concluída.
+**Dependência:** Fase 1 concluída (✅), ADR-009 aceita (✅). Fase 2 diferida (ADR-016) — não bloqueia o início da Fase 3.
+
+**Bloqueios ativos:** Nenhum.
 
 ---
 
