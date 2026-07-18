@@ -110,7 +110,7 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 
 Entregas previstas: validação de contract drift (mudanças de schema na origem), controle de volumetria, logs estruturados (JSON).
 
-**Status:** Diferida para execução em paralelo com a Fase 3, conforme ADR-016. Bug de dual logging corrigido separadamente (item pontual, não faz parte do diferimento). Retomada condicionada a: nova execução do pipeline de ingestão, ou necessidade identificada ao final da Camada Gold.
+**Status:** Diferida para execução em paralelo com a Fase 3, conforme ADR-016. Bug de dual logging já corrigido em 26/04/2026 (consolidação do motor de ingestão em `resources/motor_ingestao.py` com logging centralizado) — item mantido nesta seção apenas por rastreabilidade histórica. Retomada condicionada a: nova execução do pipeline de ingestão, ou necessidade identificada ao final da Camada Gold.
 
 **Dependência:** Fase 1 concluída.
 
