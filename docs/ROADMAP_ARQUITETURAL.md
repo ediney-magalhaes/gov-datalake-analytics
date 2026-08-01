@@ -125,7 +125,7 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 | 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ✅ Concluído |
 | 3.3 | Modelos de staging (`stg_`) — um por asset Bronze, aplicando `id_servidor_portal` e rehash SHA-256 na ENAP (ADR-009) | ⏳ Pendente |
 | 3.4 | Definição de testes dbt (`unique`, `not_null`, `relationships`) nos modelos de staging | ⏳ Pendente |
-| 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C | ⏳ Pendente |
+| 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C. Inclui PEP como fato independente (base agregada por grupo demográfico/organizacional, sem identificação individual — não participa do JOIN via `id_servidor_portal`) | ⏳ Pendente |
 
 **Dependência:** Fase 1 concluída (✅), ADR-009 aceita (✅). Fase 2 diferida (ADR-016) — não bloqueia o início da Fase 3.
 
