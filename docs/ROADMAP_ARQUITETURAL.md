@@ -121,8 +121,8 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 
 | Sprint | Entrega | Status |
 |:-------|:--------|:------:|
-| 3.1 | Inicialização do projeto dbt Core — `profiles.yml` conectado ao BigQuery | ⏳ Pendente |
-| 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ⏳ Pendente |
+| 3.1 | Inicialização do projeto dbt Core — `profiles.yml` conectado ao BigQuery | ✅ Concluído |
+| 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ✅ Concluído |
 | 3.3 | Modelos de staging (`stg_`) — um por asset Bronze, aplicando `id_servidor_portal` e rehash SHA-256 na ENAP (ADR-009) | ⏳ Pendente |
 | 3.4 | Definição de testes dbt (`unique`, `not_null`, `relationships`) nos modelos de staging | ⏳ Pendente |
 | 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C | ⏳ Pendente |
