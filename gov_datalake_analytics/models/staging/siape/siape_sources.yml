@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: siape
+    database: gov-datalake-analytics
+    schema: bronze
+    tables:
+      - name: siape_ativos
