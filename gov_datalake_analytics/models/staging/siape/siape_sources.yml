@@ -7,3 +7,4 @@ sources:
     tables:
       - name: siape_ativos
       - name: siape_remuneracao
+      - name: siape_aposentados
