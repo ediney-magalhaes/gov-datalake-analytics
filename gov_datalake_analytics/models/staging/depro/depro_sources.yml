@@ -7,3 +7,4 @@ sources:
     tables:
       - name: depro_alocacao
       - name: depro_cargos
+      - name: depro_aposentadorias
