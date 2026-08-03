@@ -76,10 +76,12 @@ Devido à presença de caracteres especiais, acentos, símbolos monetários e as
 
 - **Descrição:** Base do Departamento de Estudos e Políticas do Estado, da Previdência e do Trabalho (DEPRO/MGI), contendo projeções e registros de alocação, cargos e aposentadorias de servidores por órgão.
 - **Formato de Origem:** .zip contendo arquivos .csv
-- **Codificação:** latin1
-- **Separador:** ;
+- **Codificação:** utf-8
+- **Separador:** , (vírgula)
 - **Frequência:** Mensal
 - **Método de Ingestão:** Requisição HTTP com headers customizados, descompactação em memória (io.BytesIO) via Dagster.
+
+> **Nota de correção (02/08/2026):** a documentação original registrava codificação `latin1` e separador `;` (padrão herdado do SIAPE). Durante a construção da Camada Silver, identificou-se que os três arquivos CSV desta fonte (`alocacao-servidores.csv`, `cargos-efetivos.csv`, `projecao-aposentadorias.csv`) usam de fato `,` como separador e `utf-8` como codificação — confirmado via inspeção do cabeçalho bruto direto do ZIP de origem. O código de ingestão (`dagster_pipelines/assets/bronze/depro.py`) foi corrigido e as partições históricas foram reprocessadas.
 
 | Asset | Descrição |
 |:------|:----------|
@@ -99,8 +101,10 @@ Devido à presença de caracteres especiais, acentos, símbolos monetários e as
 - **Método de Ingestão:** Download de arquivo via HTTP com dupla descompactação em memória RAM via Dagster (asset: `enap_capacitacao`).
 
 ### LGPD e Segurança
-- A origem fornece o CPF mascarado em MD5.
-- Para garantir a interoperabilidade (JOIN) com as bases do SIAPE, o pipeline reaplica o hash SHA-256 + Salt sobre o valor de origem, criando uma chave criptográfica unificada em todo o Data Lake.
+
+A origem fornece a coluna `codigo_pessoa` — segundo o Dicionário de Dados oficial da Escola Virtual Gov, um **"código anonimizado que identifica de forma única cada pessoa"**, gerado pela própria plataforma EV.G.
+
+> **Correção de premissa (ADR-009, 02/08/2026):** presumia-se anteriormente que `codigo_pessoa` fosse um hash MD5 do CPF mascarado, compatível por rehash SHA-256 com o `hash_cpf` das demais fontes. Essa premissa foi verificada e **invalidada**: o dicionário oficial não associa `codigo_pessoa` a CPF, e não é possível reverter um hash de terceiros para recalcular outro compatível. **A ENAP não participa do record linkage com SIAPE/DEPRO** e é tratada como fato independente na modelagem — mesmo tratamento aplicado ao PEP.
 
 ---
 
@@ -134,15 +138,16 @@ Devido à presença de caracteres especiais, acentos, símbolos monetários e as
 - As tabelas da Camada Prata passam por tipagem estrita, renomeação semântica e deduplicação técnica.
 - Valores nulos críticos tratados via regras de negócio (ex: COALESCE para 0.00 em salários vazios). Campos imputados permanecem rastreáveis via testes de auditoria (dbt tests) para evitar falsos positivos na Camada Ouro.
 
-## Mapeamento Técnico Principal (Exemplo: stg_siape_ativos)
+## Mapeamento Técnico Principal (Exemplo: stg_siape__ativos)
 
 | Bronze (Origem) | Prata (Destino) | Regra de Transformação |
 |:----------------|:----------------|:-----------------------|
-| CPF | hash_cpf | CAST para STRING + Normalização |
-| NOME | nome_servidor | UPPER() e TRIM() para limpeza de strings |
-| DESCRICAO_CARGO | cargo_nome | Padronização de nomenclatura |
-| MES_REFERENCIA | mes_competencia | Conversão para padrão DATE ou Competência |
-| ID_SERVIDOR_PORTAL | id_vinculo | Mantido como identificador único de vínculo |
+| CPF | hash_cpf | Pseudonimizado ainda na Bronze (SHA-256 + Salt); a Prata apenas herda a coluna já tratada. |
+| DATA_INGRESSO_CARGOFUNCAO e demais colunas de data | (mesmo nome) | `SAFE.PARSE_DATE` — conversão de STRING para DATE, mantendo o nome original da coluna. |
+| year, month | (mesmo nome) | Mantidos como INT64, oriundos da partição Hive — não há coluna única `mes_competencia`; a competência é representada pelo par `year`/`month`. |
+| `id_servidor_portal` | (mesmo nome) | Mantido sem rename — chave universal de cruzamento (ADR-009), sem transformação de valor. |
+
+> **Nota de correção (02/08/2026):** a versão anterior deste documento descrevia um mapeamento com renomes (`MES_REFERENCIA → mes_competencia`, `ID_SERVIDOR_PORTAL → id_vinculo`) que não corresponde ao que foi de fato implementado nos modelos de staging. A tabela acima reflete o padrão real, validado via `bq show` contra a tabela materializada `prata.stg_siape__ativos`.
 
 ## Regras de Qualidade e Unicidade
 
