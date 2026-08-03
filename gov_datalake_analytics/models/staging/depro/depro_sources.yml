@@ -6,3 +6,4 @@ sources:
     schema: bronze
     tables:
       - name: depro_alocacao
+      - name: depro_cargos
