@@ -123,7 +123,7 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 |:-------|:--------|:------:|
 | 3.1 | Inicialização do projeto dbt Core — `profiles.yml` conectado ao BigQuery | ✅ Concluído |
 | 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ✅ Concluído |
-| 3.3 | Modelos de staging (`stg_`) — um por asset Bronze, aplicando `id_servidor_portal` e rehash SHA-256 na ENAP (ADR-009) | ⏳ Pendente |
+| 3.3 | Modelos de staging (`stg_`) — 8 assets (SIAPE ×4, DEPRO ×3, ENAP ×1), aplicando `id_servidor_portal` como chave de cruzamento (ADR-009). ENAP tratada como fato independente, sem linkage com SIAPE/DEPRO (ver correção da ADR-009 em 02/08/2026) | ✅ Concluído |
 | 3.4 | Definição de testes dbt (`unique`, `not_null`, `relationships`) nos modelos de staging | ⏳ Pendente |
 | 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C. Inclui PEP como fato independente (base agregada por grupo demográfico/organizacional, sem identificação individual — não participa do JOIN via `id_servidor_portal`) | ⏳ Pendente |
 
@@ -204,11 +204,11 @@ Papel: supervisão técnica da integração dos resultados analíticos das Trilh
 
 ## 4. Próximos Passos
 
-Ações imediatas desbloqueadas hoje (Jul/2026):
+Ações imediatas desbloqueadas hoje (02/08/2026):
 
-1. **Decisão de sequenciamento** — definir se a Fase 2 (Estabilização) precede a Fase 3 (Silver/dbt Core), ou se os itens da Fase 2 são tratados como dívida técnica consciente e documentada
+1. **Sprint 3.4** — definição de testes dbt (`unique`, `not_null`, `relationships`, `accepted_values`) nos 8 modelos de staging já construídos
 2. **Sprint 1.9** — iniciar levantamento das bases Observatório de Pessoal, PEP e avaliar disponibilidade da ACT Lemann
-3. **Promoção da ADR-009** — condição de promoção cumprida (inspeção completa das fontes da Fase 1 concluída); atualizar status de "Proposto" para "Aceito"
+3. **Termo de Homologação da Prata** — aguardar conclusão das Sprints 3.4 e 3.5 antes de formalizar (não documentar parcialmente)
 4. **Silver Layer** — iniciar modelagem dimensional Kimball e configuração do dbt Core, condicionada à decisão do item 1
 
 ---
@@ -218,8 +218,8 @@ Ações imediatas desbloqueadas hoje (Jul/2026):
 | Pendência | Contexto |
 |:----------|:---------|
 | Produto 1 — Edital 01 | Relatório de diagnóstico das bases não foi formalmente finalizado. Sessão de Documentação Reversa planejada ao final da Camada Gold. |
-| ADR-009 | Condição de promoção cumprida — todas as fontes da Fase 1 inspecionadas. Pronta para promoção de "Proposto" para "Aceito" (ação a ser executada no arquivo `0009-estrategia-chave-universal-record-linkage.md`). |
 | Disponibilidade ACT Lemann | Acesso à base não confirmado. |
+| Record Linkage ENAP | Confirmado em 02/08/2026 (ADR-009): `codigo_pessoa` é ID proprietário da EV.G, sem relação com CPF. ENAP não participa do JOIN nível-servidor com SIAPE/DEPRO. Estudos de capacitação (Trilhas B/C) ficam limitados a análises agregadas, salvo decisão futura por linkage probabilístico com validação de precisão. |
 
 ---
 
@@ -234,6 +234,7 @@ Ações imediatas desbloqueadas hoje (Jul/2026):
 | **Duplicidade de registros** | Médio | "Chave composta, particionamento `Overwrite` e `dbt tests`." |
 | **Custo excessivo de processamento** | Alto | `Hive Partitioning` no Data Lake e `Clustering` no BigQuery (FinOps). |
 | **Mudança de schema na origem (Contract Drift)** | Médio | Detecção planejada para Fase 2 — validação de colunas a cada ingestão. |
+| **Separador/encoding incorreto na origem (DEPRO)** | Alto | Descoberto em 02/08/2026 durante construção da Silver: os 3 CSVs do DEPRO usam `,` e `utf-8`, não `;`/`latin1` como documentado originalmente. Corrigido no código de ingestão (`depro.py`) e partições históricas reprocessadas via backfill Dagster. Risco geral para o projeto: parâmetros de ingestão documentados devem ser tratados como hipótese até validados contra o cabeçalho real do arquivo de origem, não como fato assumido. |
 
 ---
 
