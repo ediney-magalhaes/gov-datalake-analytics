@@ -10,8 +10,8 @@ particao_mensal = MonthlyPartitionsDefinition(start_date="2020-01-01")
 # Partição: Mensal (2020-01 até o mês atual)
 # Fonte: ZIP público do Repositório de dados do governo
 # Arquivo interno: alocacao-servidores.csv
-# Separador: ; (padrão)
-# Encoding: latin1 (padrão)
+# Separador: ,
+# Encoding: UTF-8
 @asset(group_name="bronze_depro", partitions_def=particao_mensal)
 def depro_alocacao(context):
     """Alocação de servidores por órgão — Bronze Raw e Normalized"""
@@ -21,6 +21,8 @@ def depro_alocacao(context):
     ingestao_bronze_raw_zip(
         sistema='depro_alocacao',
         ano=ano, mes=mes,
+        separador=',',
+        encoding='utf-8',
         url_download=f'https://repositorio.dados.gov.br/seges/raio-x/raiox-{ano}-{mes}.zip',
         nome_arquivo_interno='alocacao-servidores.csv'
     )
@@ -31,8 +33,8 @@ def depro_alocacao(context):
 # Partição: Mensal (2015-01 até o mês atual)
 # Fonte: ZIP público do Repositório de dados do governo
 # Arquivo interno: cargos-efetivos.csv
-# Separador: ; (padrão)
-# Encoding: latin1 (padrão)
+# Separador: ,
+# Encoding: UTF-8
 @asset(group_name="bronze_depro", partitions_def=particao_mensal)
 def depro_cargos(context):
     """Cargos de servidores por órgão — Bronze Raw e Normalized"""
@@ -42,6 +44,8 @@ def depro_cargos(context):
     ingestao_bronze_raw_zip(
         sistema='depro_cargos',
         ano=ano, mes=mes,
+        separador=',',
+        encoding='utf-8',
         url_download=f'https://repositorio.dados.gov.br/seges/raio-x/raiox-{ano}-{mes}.zip',
         nome_arquivo_interno='cargos-efetivos.csv'
     )
@@ -52,8 +56,8 @@ def depro_cargos(context):
 # Partição: Mensal (2015-01 até o mês atual)
 # Fonte: ZIP público do Repositório de dados do governo
 # Arquivo interno: projecao-aposentadorias.csv
-# Separador: ; (padrão)
-# Encoding: latin1 (padrão)
+# Separador: ,
+# Encoding: UTF-8
 @asset(group_name="bronze_depro", partitions_def=particao_mensal)
 def depro_aposentadorias(context):
     """Projeção de aposentadorias por órgão — Bronze Raw e Normalized"""
@@ -63,6 +67,8 @@ def depro_aposentadorias(context):
     ingestao_bronze_raw_zip(
         sistema='depro_aposentadorias',
         ano=ano, mes=mes,
+        separador=',',
+        encoding='utf-8',
         url_download=f'https://repositorio.dados.gov.br/seges/raio-x/raiox-{ano}-{mes}.zip',
         nome_arquivo_interno='projecao-aposentadorias.csv'
     )
