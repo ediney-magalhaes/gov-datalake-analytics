@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: siape
+    database: gov-datalake-analytics
+    schema: bronze
+    tables:
+      - name: siape_ativos
+      - name: siape_remuneracao
+      - name: siape_aposentados
+      - name: siape_afastamentos

@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: depro
+    database: gov-datalake-analytics
+    schema: bronze
+    tables:
+      - name: depro_alocacao
+      - name: depro_cargos
+      - name: depro_aposentadorias
