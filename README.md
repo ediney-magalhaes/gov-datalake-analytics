@@ -84,11 +84,11 @@ flowchart TD
 
 | Sistema | Descrição | Assets | Status |
 |:--------|:----------|:------:|:------:|
-| SIAPE | Servidores ativos, remuneração, aposentados, afastamentos | 4 | 🔄 Em andamento |
-| DEPRO | Alocação, cargos, aposentadorias por órgão | 3 | ⏳ Pendente |
-| ENAP | Matrículas e capacitação — Escola Virtual Gov | 1 | ⏳ Pendente |
+| SIAPE | Servidores ativos, remuneração, aposentados, afastamentos | 4 | ✅ Bronze e Silver concluídos |
+| DEPRO | Alocação, cargos, aposentadorias por órgão | 3 | ✅ Bronze e Silver concluídos |
+| ENAP | Matrículas e capacitação — Escola Virtual Gov | 1 | ✅ Bronze e Silver concluídos (sem linkage com SIAPE/DEPRO — ver ADR-009) |
 | Observatório de Pessoal | Produtos analíticos do MGI | — | ⏳ Previsto |
-| PEP | Desempenho e avaliação | — | ⏳ Previsto |
+| PEP | Desempenho e avaliação | — | ⏳ Previsto (Sprint 3.5) |
 | ACT Lemann | Competências | — | ⏳ Disponibilidade não confirmada |
 
 > Detalhamento de schemas, URLs e regras de ingestão: [`docs/DICIONARIO_DE_DADOS_FONTES.md`](docs/DICIONARIO_DE_DADOS_FONTES.md)
@@ -99,12 +99,12 @@ flowchart TD
 
 | Camada | Tecnologia | Função |
 |:-------|:-----------|:-------|
-| Ingestão | Python 3.12, Polars, Requests | Motor de extração e processamento in-memory |
+| Ingestão | Python 3.13, Polars, Requests | Motor de extração e processamento in-memory |
 | Segurança | hashlib (SHA-256 + Salt) | Pseudonimização LGPD in-flight |
-| Orquestração | Dagster 1.13.2 | Agendamento, backfill e monitoramento |
+| Orquestração | Dagster | Agendamento, backfill e monitoramento |
 | Storage | Google Cloud Storage + gcsfs | Camada Bronze em Parquet particionado |
-| Transformação | dbt Core | Silver e Gold (planejado) |
-| Data Warehouse | BigQuery | Silver e Gold (planejado) |
+| Transformação | dbt Core 1.12.0 | Silver (concluído — 8 modelos de staging) e Gold (planejado) |
+| Data Warehouse | BigQuery | Silver em produção (dataset `prata`); Gold planejado |
 | Configuração | python-dotenv | Variáveis de ambiente como contrato |
 
 ---
@@ -155,9 +155,10 @@ Acesse `http://localhost:3000` para visualizar os assets, disparar materializaç
 │   ├── assets/bronze/          # siape.py, depro.py, enap.py
 │   ├── resources/              # motor_ingestao.py (Polars + Requests)
 │   └── __init__.py             # Definitions — registro dos 8 assets
-├── analytics_gov/              # dbt Core — modelos Silver e Gold (planejado)
+├── gov_datalake_analytics/      # dbt Core — modelos Silver (concluído) e Gold (planejado)
+│   └── models/staging/          # stg_siape__*, stg_depro__*, stg_enap__* (8 modelos)
 ├── docs/                       # Documentação técnica
-│   ├── adrs/                   # Registros de Decisões Arquiteturais (ADR-001 a 015)
+│   ├── adrs/                   # Registros de Decisões Arquiteturais
 │   ├── ROADMAP_ARQUITETURAL.md
 │   ├── DICIONARIO_DE_DADOS_FONTES.md
 │   ├── PROPOSTA_ARQUITETURA_MAPEAMENTO.md
