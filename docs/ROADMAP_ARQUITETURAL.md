@@ -125,7 +125,7 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 | 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ✅ Concluído |
 | 3.3 | Modelos de staging (`stg_`) — 8 assets (SIAPE ×4, DEPRO ×3, ENAP ×1), aplicando `id_servidor_portal` como chave de cruzamento (ADR-009). ENAP tratada como fato independente, sem linkage com SIAPE/DEPRO (ver correção da ADR-009 em 02/08/2026) | ✅ Concluído |
 | 3.4 | Definição de testes dbt (`unique`, `not_null`, `relationships`) nos modelos de staging | ⏳ Pendente |
-| 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C. Inclui PEP como fato independente (base agregada por grupo demográfico/organizacional, sem identificação individual — não participa do JOIN via `id_servidor_portal`) | ⏳ Pendente |
+| 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C. Inclui PEP como fato independente (base agregada por grupo demográfico/organizacional, sem identificação individual — não participa do JOIN via `id_servidor_portal`). Avaliar reaproveitamento de `stg_siape__aposentados` para os Estudos 3 (Fluxos e Fronteiras) e 4 (Contratações Temporárias): a tabela contém 45 categorias de `situacao_vinculo`, incluindo cessão (2,2M+ linhas) e contratação temporária (1,4M+ linhas), não só aposentadoria (29,9M linhas) — descoberto na Sprint 3.4 (06/08/2026) | ⏳ Pendente |
 
 **Dependência:** Fase 1 concluída (✅), ADR-009 aceita (✅). Fase 2 diferida (ADR-016) — não bloqueia o início da Fase 3.
 
@@ -220,6 +220,7 @@ Ações imediatas desbloqueadas hoje (02/08/2026):
 | Produto 1 — Edital 01 | Relatório de diagnóstico das bases não foi formalmente finalizado. Sessão de Documentação Reversa planejada ao final da Camada Gold. |
 | Disponibilidade ACT Lemann | Acesso à base não confirmado. |
 | Record Linkage ENAP | Confirmado em 02/08/2026 (ADR-009): `codigo_pessoa` é ID proprietário da EV.G, sem relação com CPF. ENAP não participa do JOIN nível-servidor com SIAPE/DEPRO. Estudos de capacitação (Trilhas B/C) ficam limitados a análises agregadas, salvo decisão futura por linkage probabilístico com validação de precisão. |
+
 
 ---
 
