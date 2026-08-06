@@ -57,3 +57,4 @@ final as(
     from source
 )
 select * from final
+where id_servidor_portal is not null and id_servidor_portal != ''
