@@ -71,3 +71,41 @@ models:
               arguments:
                 min_value: 1
                 max_value: 12
+  - name: stg_depro__aposentadorias
+    description: "Tabela com registro das aposentadorias previstas e perfil dos servidores, tratada na camada staging com tipagem de datas, exclusão de dados sensíveis"
+    columns:
+      - name: orgao_codigo_siorg
+        description: "Coluna com código do órgão onde o servidor é alocado, não é chave de linkage com a fonte SIAPE"
+        tests:
+          - not_null
+      - name: ano_aposentadoria
+        description: "Registro do ano de aposentadoria do servidor"
+        tests:
+          - not_null
+      - name: quantidade_prevista
+        description: "Coluna com a quantidade prevista de aposentadorias"
+        tests:
+          - not_null
+      - name: sexo
+        description: "Registro do sexo do servidor"
+        tests:
+          - not_null
+      - name: faixa_etaria
+        description: "Coluna com a categoria de faixa_etaria de acordo com a idade do servidor"
+        tests:
+          - not_null
+      - name: year
+        description: "Ano de competência do registro, derivado da partição Hive (year=) no GCS"
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 2015
+                max_value: 'extract(year from current_date())'
+      - name: month
+        description: "Mês de competência do registro, derivado da partição Hive (month=) no GCS"
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 12
+      
