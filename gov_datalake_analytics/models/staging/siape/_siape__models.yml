@@ -100,3 +100,24 @@ models:
               arguments:
                 min_value: 1
                 max_value: 12
+  - name: stg_siape__afastamentos
+    description: "Tabela com registros de períodos de afastamento dos servidores, tratada na camada staging com tipagem de datas, exclusão de dados sensíveis"
+    columns:
+      - name: id_servidor_portal
+        description: "Identificador único do servidor, chave de linkage entre as fontes SIAPE e DEPRO"
+        tests:
+          - not_null
+      - name: year
+        description: "Ano de competência do registro, derivado da partição Hive (year=) no GCS"
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 2015
+                max_value: 'extract(year from current_date())'
+      - name: month
+        description: "Mês de competência do registro, derivado da partição Hive (month=) no GCS"
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 12
