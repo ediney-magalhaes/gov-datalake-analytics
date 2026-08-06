@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_enap__capacitacao
+    description: "Tabela com registro de treinamentos iniciados e/ou terminados dos usuários, incluindo servidores; tratada na camada staging com tipagem de datas, exclusão de dados sensíveis"
+    columns:
+      - name: codigo_pessoa
+        description: "Coluna identificador do usuário no portal ENAP, é chave de identificação interna do portal"
+        tests:
+          - not_null
+      - name: cod_curso
+        description: "Código do curso escolhido para treinamento"
+        tests:
+          - not_null
+      - name: sit_matricula
+        description: "Declara o estado da matrícula realizada pelo usuário"
+        tests:
+          - not_null
+      - name: sexo
+        description: "Sexo do usuário"
+        tests:
+          - not_null
+      - name: deficiencia
+        description: "Indica se o usuário possui deficiência e, quando aplicável, o tipo"
+        tests:
+          - not_null
+      - name: year
+        description: "Ano de competência do registro, derivado da partição Hive (year=) no GCS"
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 2015
+                max_value: 'extract(year from current_date())'
+      - name: month
+        description: "Mês de competência do registro, derivado da partição Hive (month=) no GCS"
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 12
