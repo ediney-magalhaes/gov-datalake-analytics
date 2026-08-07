@@ -10,4 +10,4 @@ final as(
         safe.parse_date('%d/%m/%Y', data_fim_afastamento) as data_fim_afastamento
     from source
 )
-select * from final
+select distinct * from final
