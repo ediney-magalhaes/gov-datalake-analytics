@@ -1,7 +1,7 @@
 # Roadmap — Data Lake Analytics GOV
 ### Plataforma de Análise de Pessoal da Administração Pública Federal
 **Motivação:** PNUD BRA/21/011 — MGI/SETE/SGP  
-**Última atualização:** 11/07/2026
+**Última atualização:** 07/08/2026
 
 ---
 
@@ -50,7 +50,7 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 | Fase 0 | A | Auditoria Arquitetural da Camada Bronze | ✅ Concluída | Mar/2026 |
 | Fase 1 | A | Expansão da Camada Bronze | ✅ Concluída | Jul/2026 |
 | Fase 2 | A | Estabilização da Ingestão | ⏸️ Diferida (ADR-016) | Jul/2026 |
-| Fase 3 | A | Reconstrução da Camada Silver (dbt) | 🔄 Em andamento | Jul/2026 |
+| Fase 3 | A | Reconstrução da Camada Silver (dbt) | ✅ Concluída | Ago/2026 |
 | Fase 4 | A | Reconstrução da Camada Gold (Data Marts) | ⏳ Pendente | — |
 | Fase 5 | A | Infraestrutura como Código e CI/CD | ⏳ Pendente | — |
 | Fase 6 | A | Observabilidade e FinOps | ⏳ Pendente | — |
@@ -116,30 +116,44 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 
 ---
 
-##### 🔄 Fase 3 — Reconstrução da Camada Silver (dbt Core)
+##### ✅ Fase 3 — Reconstrução da Camada Silver (dbt Core)
 **Objetivo:** Modelagem dimensional (Kimball) sobre a Camada Bronze homologada, aplicando a estratégia de chave definida na ADR-009.
-
+ 
 | Sprint | Entrega | Status |
 |:-------|:--------|:------:|
 | 3.1 | Inicialização do projeto dbt Core — `profiles.yml` conectado ao BigQuery | ✅ Concluído |
 | 3.2 | Primeira validação de conexão — `dbt debug` bem-sucedido | ✅ Concluído |
 | 3.3 | Modelos de staging (`stg_`) — 8 assets (SIAPE ×4, DEPRO ×3, ENAP ×1), aplicando `id_servidor_portal` como chave de cruzamento (ADR-009). ENAP tratada como fato independente, sem linkage com SIAPE/DEPRO (ver correção da ADR-009 em 02/08/2026) | ✅ Concluído |
-| 3.4 | Definição de testes dbt (`unique`, `not_null`, `relationships`) nos modelos de staging | ⏳ Pendente |
-| 3.5 | Modelagem dimensional Kimball — definição de dimensões e fatos para os Tracks B e C. Inclui PEP como fato independente (base agregada por grupo demográfico/organizacional, sem identificação individual — não participa do JOIN via `id_servidor_portal`). Avaliar reaproveitamento de `stg_siape__aposentados` para os Estudos 3 (Fluxos e Fronteiras) e 4 (Contratações Temporárias): a tabela contém 45 categorias de `situacao_vinculo`, incluindo cessão (2,2M+ linhas) e contratação temporária (1,4M+ linhas), não só aposentadoria (29,9M linhas) — descoberto na Sprint 3.4 (06/08/2026). `stg_siape__afastamentos` tem 173 linhas (0,002% do total) com `data_inicio_afastamento` e `data_fim_afastamento` ambas nulas — excluir esses registros ao construir a Mart/Fato de Afastamentos, não representam afastamento válido — descoberto na Sprint 3.4 (06/08/2026). `stg_enap__capacitacao` tem `raca` nula em ~26% dos registros (5,1M de 19,3M) — parece ser campo opcional no formulário de matrícula (existe resposta ativa "Não quero informar" distinta de nulo). Ao desenhar o Estudo 7 (Diversidade Interseccional), considerar essa taxa de não-resposta na metodologia — descoberto na Sprint 3.4 (06/08/2026) | ⏳ Pendente |
-
-
-**Dependência:** Fase 1 concluída (✅), ADR-009 aceita (✅). Fase 2 diferida (ADR-016) — não bloqueia o início da Fase 3.
-
+| 3.4 | Testes dbt de qualidade nos 8 modelos de staging: 48 testes (`not_null`, `dbt_utils.accepted_range`), mapeados coluna a coluna contra os estudos dos editais. Decisão de não aplicar teste de unicidade em `stg_siape__ativos` formalizada em ADR-017 (vínculos concomitantes legítimos). Bugfix aplicado em `stg_siape__remuneracao` (linha de rodapé de CSV) | ✅ Concluído (06/08/2026) |
+| 3.5 | Modelagem dimensional Kimball concluída: 8 fatos e 7 dimensões definidos e documentados em `docs/MODELO_DIMENSIONAL_GOLD.md`. Fatos: Remuneração, Vínculo/Ativos, Situação de Vínculo (reaproveitamento de `stg_siape__aposentados`, 45 categorias), Afastamentos, Cargos DEPRO, Aposentadorias Previstas DEPRO, Alocação DEPRO, Capacitação ENAP. Três bugs técnicos descobertos e corrigidos durante a sprint: duplicação exata em `stg_siape__afastamentos` (fix `DISTINCT`), anomalia de grão em `stg_depro__alocacao` (agregação `SUM`), inconsistência de tipo `idade`/`carga_horaria` em `stg_enap__capacitacao` (132 partições Bronze reescritas). PEP mantido como fato independente, conforme já decidido | ✅ Concluído (07/08/2026) |
+ 
+**Dependência:** Fase 1 concluída (✅), ADR-009 aceita (✅). Fase 2 diferida (ADR-016), não bloqueou o andamento da Fase 3.
+ 
 **Bloqueios ativos:** Nenhum.
+ 
+**Documentos gerados nesta fase:** `docs/MODELO_DIMENSIONAL_GOLD.md` (insumo direto para a Fase 4), `docs/TERMO_HOMOLOGACAO_PRATA.md` (reescrito com dados reais das Sprints 3.4/3.5, ver Seção 5 deste roadmap para pendência de verificação residual), ADR-017.
 
 ---
 
 ##### ⏳ Fase 4 — Reconstrução da Camada Gold (Data Marts)
-**Objetivo:** Modelos analíticos definitivos para consumo nos estudos e no Power BI.
+**Objetivo:** Modelos analíticos definitivos para consumo nos estudos e no Power BI, construídos a partir das decisões formalizadas em `docs/MODELO_DIMENSIONAL_GOLD.md`.
 
-Entregas previstas: OBT por tema (Trajetórias, Remuneração, Diversidade, Competências, Aposentadorias, Capacitação), particionamento `PARTITION BY mes_referencia`, clustering `CLUSTER BY orgao, uf, hash_cpf`, decisão FinOps External Tables vs tabelas nativas (ADR pendente).
+| Sprint | Entrega | Status |
+|:-------|:--------|:------:|
+| 4.1 | Dimensões compartilhadas: `dim_tempo`, `dim_servidor`, `dim_orgao_siape`, `dim_tipo_vinculo`, `dim_orgao_depro`, `dim_pessoa_enap`, `dim_curso_enap` | ⏳ Pendente |
+| 4.2 | Fato Remuneração (grão `id_servidor_portal + year + month`, sem chave surrogate) | ⏳ Pendente |
+| 4.3 | Fato Vínculo/Ativos (chave surrogate `sk_vinculo`, 6 colunas, ADR-017) | ⏳ Pendente |
+| 4.4 | Fato Situação de Vínculo (reaproveita `stg_siape__aposentados`, mesma lógica de `sk_vinculo`, 45 categorias de `situacao_vinculo`) | ⏳ Pendente |
+| 4.5 | Fato Afastamentos (grão `id_servidor_portal + year + month + datas`) | ⏳ Pendente |
+| 4.6 | 3 Fatos DEPRO — Cargos, Aposentadorias Previstas, Alocação (com agregação `SUM` no grão `orgao + mês`, ver Seção 9.2 do `TERMO_HOMOLOGACAO_PRATA.md`) | ⏳ Pendente |
+| 4.7 | Fato Capacitação ENAP (chave surrogate `sk_matricula`, medida `carga_horaria`) | ⏳ Pendente |
+| 4.8 | Ponte Capacitação × Mês (factless, expande `dt_inicio`/`dt_fim` em uma linha por mês de duração do curso) | ⏳ Pendente |
+| 4.9 | Decisão FinOps (External Tables vs. tabelas nativas) e configuração de particionamento/clustering nos 8 marts | ⏳ Pendente |
+| 4.10 | Testes dbt nos marts da Gold e emissão do Termo de Homologação Ouro | ⏳ Pendente |
 
-**Dependência:** Fase 3 concluída.
+**Dependência:** Fase 3 concluída (✅, 07/08/2026).
+
+**Bloqueios ativos:** Nenhum.
 
 ---
 
@@ -204,13 +218,13 @@ Papel: supervisão técnica da integração dos resultados analíticos das Trilh
 ---
 
 ## 4. Próximos Passos
-
-Ações imediatas desbloqueadas hoje (02/08/2026):
-
-1. **Sprint 3.4** — definição de testes dbt (`unique`, `not_null`, `relationships`, `accepted_values`) nos 8 modelos de staging já construídos
-2. **Sprint 1.9** — iniciar levantamento das bases Observatório de Pessoal, PEP e avaliar disponibilidade da ACT Lemann
-3. **Termo de Homologação da Prata** — aguardar conclusão das Sprints 3.4 e 3.5 antes de formalizar (não documentar parcialmente)
-4. **Silver Layer** — iniciar modelagem dimensional Kimball e configuração do dbt Core, condicionada à decisão do item 1
+ 
+Ações imediatas desbloqueadas hoje (07/08/2026):
+ 
+1. **Fase 4** — iniciar construção física dos models de Mart (`models/marts/*.sql`), a partir de `docs/MODELO_DIMENSIONAL_GOLD.md`. Primeiro candidato natural: Fato Remuneração (mais simples, sem chave surrogate).
+2. **Verificação residual pendente** — confirmar via `INFORMATION_SCHEMA.COLUMNS` se a coluna `nome` está presente em `stg_siape__aposentados` e `stg_siape__afastamentos` (os dois modelos SIAPE ainda não checados). Os 3 modelos DEPRO e o modelo ENAP já têm schema confirmado sem coluna de nome de pessoa (DEPRO não tem; ENAP só tem `nome_curso`/`nome_turma`) — não precisam de nova verificação.
+3. **Sprint 1.9** — retomar levantamento das bases Observatório de Pessoal, PEP e avaliar disponibilidade da ACT Lemann (não bloqueante, pode correr em paralelo à Fase 4).
+4. **Sessão de Documentação Reversa (Produto 1)** — permanece planejada para o final da Camada Gold (Fase 4), conforme Seção 5.
 
 ---
 
@@ -218,25 +232,27 @@ Ações imediatas desbloqueadas hoje (02/08/2026):
 
 | Pendência | Contexto |
 |:----------|:---------|
-| Produto 1 — Edital 01 | Relatório de diagnóstico das bases não foi formalmente finalizado. Sessão de Documentação Reversa planejada ao final da Camada Gold. |
+| Produto 1 — Edital 01 | Relatório de diagnóstico das bases não foi formalmente finalizado. Sessão de Documentação Reversa planejada ao final da Camada Gold (Fase 4). |
 | Disponibilidade ACT Lemann | Acesso à base não confirmado. |
 | Record Linkage ENAP | Confirmado em 02/08/2026 (ADR-009): `codigo_pessoa` é ID proprietário da EV.G, sem relação com CPF. ENAP não participa do JOIN nível-servidor com SIAPE/DEPRO. Estudos de capacitação (Trilhas B/C) ficam limitados a análises agregadas, salvo decisão futura por linkage probabilístico com validação de precisão. |
+| Tabela de-para SIAPE↔SIORG | Confirmado em 07/08/2026 (Sprint 3.5): `cod_org_lotacao` (SIAPE) e `orgao_codigo_siorg` (DEPRO) são taxonomias de órgão incompatíveis, sem tabela de-para nas fontes atuais. Não bloqueia os estudos mapeados nos 4 editais atualmente, mas reaparece se o Estudo 2 (Trilha B) evoluir para cruzamento de custo por órgão entre SIAPE e projeções DEPRO. |
 
 
 ---
 
 ## 6. Gestão de Riscos Técnicos e Mitigações
 
-|Risco Técnico | Impacto | Mitigação Implementada |
+| Risco Técnico | Impacto | Mitigação Implementada |
 |:--- |:--- |:--- |
 | **Bloqueio por Rate Limit (Erro 403)** | Alto | Pausas estruturadas e headers simulando navegadores reais. |
 | **Inconsistência de schemas (Colunas)** | Médio | Filtro `Regex (Whitelist)` e isolamento da camada Bronze Normalized. |
-| **Estouro de Memória (OOM)** | Alto | Motor vetorizado Polars — processamento colunar in-memory sem carregar o arquivo inteiro na RAM. |
+| **Estouro de Memória (OOM)** | Alto | Motor vetorizado Polars, processamento colunar in-memory sem carregar o arquivo inteiro na RAM. |
 | **Instabilidade de APIs e Firewalls (Timeouts, Erros 5xx)** | Alto | Blocos `try...except` e Graceful Degradation no motor de ingestão próprio. |
-| **Duplicidade de registros** | Médio | "Chave composta, particionamento `Overwrite` e `dbt tests`." |
+| **Duplicidade de registros** | Médio | Chave composta/surrogate por fonte (ver ADR-017 e `MODELO_DIMENSIONAL_GOLD.md`), `dbt tests`, e correções pontuais (`DISTINCT` em Afastamentos, `SUM` em Alocação DEPRO). |
 | **Custo excessivo de processamento** | Alto | `Hive Partitioning` no Data Lake e `Clustering` no BigQuery (FinOps). |
-| **Mudança de schema na origem (Contract Drift)** | Médio | Detecção planejada para Fase 2 — validação de colunas a cada ingestão. |
+| **Mudança de schema na origem (Contract Drift)** | Médio | Detecção planejada para Fase 2, validação de colunas a cada ingestão. |
 | **Separador/encoding incorreto na origem (DEPRO)** | Alto | Descoberto em 02/08/2026 durante construção da Silver: os 3 CSVs do DEPRO usam `,` e `utf-8`, não `;`/`latin1` como documentado originalmente. Corrigido no código de ingestão (`depro.py`) e partições históricas reprocessadas via backfill Dagster. Risco geral para o projeto: parâmetros de ingestão documentados devem ser tratados como hipótese até validados contra o cabeçalho real do arquivo de origem, não como fato assumido. |
+| **Inferência de tipo inconsistente entre partições (ENAP)** | Alto | Descoberto em 07/08/2026: `pl.scan_csv()` sem `schema_overrides` gerou schemas Parquet divergentes entre as 132 partições de `enap_capacitacao` (`idade`/`carga_horaria` como `INT64` em algumas, `STRING` em outras). Corrigido via reescrita pontual das partições e External Table recriada sem `autodetect`. Risco geral: qualquer ingestão futura via `pl.scan_csv()`/`pl.read_csv()` deve declarar `schema_overrides` explícito para colunas numéricas, para não repetir o problema. |
 
 ---
 
