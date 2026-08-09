@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: dim_orgao_siape
+    description: "Dimensão dos órgãos dos servidores"
+    columns:
+      - name: cod_org_lotacao
+        tests:
+          - not_null
+          - unique
+      - name: org_lotacao
+        tests:
+          - not_null
