@@ -1,0 +1,13 @@
+version: 2
+
+models:
+ - name: dim_servidor
+   description: "Dimensão dos servidores, id_servidor_portal como chave unica. O grupo sigiloso (-11) vira uma linha unica (is_sigiloso = true), evitando inflar contagem de individuos. Nome e hash_cpf nulos sao esperados: hash_cpf para o grupo sigiloso, nome para servidores presentes apenas em stg_siape__aposentados (fonte sem coluna nome)."
+   columns:
+     - name: id_servidor_portal
+       tests:
+        - not_null
+        - unique
+     - name: is_sigiloso
+       tests:
+        - not_null
