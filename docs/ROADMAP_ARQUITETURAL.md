@@ -51,7 +51,7 @@ Trilha D — Supervisão e Integração Final (Edital 03)
 | Fase 1 | A | Expansão da Camada Bronze | ✅ Concluída | Jul/2026 |
 | Fase 2 | A | Estabilização da Ingestão | ⏸️ Diferida (ADR-016) | Jul/2026 |
 | Fase 3 | A | Reconstrução da Camada Silver (dbt) | ✅ Concluída | Ago/2026 |
-| Fase 4 | A | Reconstrução da Camada Gold (Data Marts) | ⏳ Pendente | — |
+| Fase 4 | A | Reconstrução da Camada Gold (Data Marts) | 🔄 Em andamento (Sprint 4.1/10 concluída) | Ago/2026 |
 | Fase 5 | A | Infraestrutura como Código e CI/CD | ⏳ Pendente | — |
 | Fase 6 | A | Observabilidade e FinOps | ⏳ Pendente | — |
 | Bloco 1 | B | Estudos: Remuneração e Trajetórias (Edital 02) | ⏳ Aguarda Gold | — |
@@ -135,12 +135,12 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 
 ---
 
-##### ⏳ Fase 4 — Reconstrução da Camada Gold (Data Marts)
+##### 🔄 Fase 4 — Reconstrução da Camada Gold (Data Marts)
 **Objetivo:** Modelos analíticos definitivos para consumo nos estudos e no Power BI, construídos a partir das decisões formalizadas em `docs/MODELO_DIMENSIONAL_GOLD.md`.
-
+ 
 | Sprint | Entrega | Status |
 |:-------|:--------|:------:|
-| 4.1 | Dimensões compartilhadas: `dim_tempo`, `dim_servidor`, `dim_orgao_siape`, `dim_tipo_vinculo`, `dim_orgao_depro`, `dim_pessoa_enap`, `dim_curso_enap` | ⏳ Pendente |
+| 4.1 | Dimensões compartilhadas: `dim_tempo`, `dim_servidor`, `dim_orgao_siape`, `dim_tipo_vinculo`, `dim_orgao_depro`, `dim_pessoa_enap`, `dim_curso_enap`. 7 dimensões construídas com SCD Tipo 1 nos atributos instáveis (identificados empiricamente, nao presumidos): `nome` (dim_servidor), `orgsup_lotacao` (dim_orgao_siape), praticamente todos os atributos de `dim_orgao_depro` (nenhum estável), `raca`/`uf_pessoa`/`municipio_pessoa`/`instituicao`/`poder`/`esfera` (dim_pessoa_enap), `nome_curso`/`conteudista`/`tematica` (dim_curso_enap). Configuração de schema por camada implementada (`macro generate_schema_name.sql` + `dbt_project.yml`, staging para `prata`, marts para `ouro`) | ✅ Concluído (08/08/2026) |
 | 4.2 | Fato Remuneração (grão `id_servidor_portal + year + month`, sem chave surrogate) | ⏳ Pendente |
 | 4.3 | Fato Vínculo/Ativos (chave surrogate `sk_vinculo`, 6 colunas, ADR-017) | ⏳ Pendente |
 | 4.4 | Fato Situação de Vínculo (reaproveita `stg_siape__aposentados`, mesma lógica de `sk_vinculo`, 45 categorias de `situacao_vinculo`) | ⏳ Pendente |
@@ -154,6 +154,8 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 **Dependência:** Fase 3 concluída (✅, 07/08/2026).
 
 **Bloqueios ativos:** Nenhum.
+
+**Achados da Sprint 4.1, relevantes para as próximas sprints:** múltiplas suposições de estabilidade se mostraram falsas ao testar com população completa (nome de servidor pode mudar por casamento/retificação; nome/sigla de órgão DEPRO muda por reforma administrativa; `raca` em ENAP é resposta declarada por matrícula, não atributo fixo). Princípio reforçado para as sprints 4.2 em diante: nenhuma coluna descritiva deve ser tratada como estável em fato ou dimensão sem teste empírico prévio.
 
 ---
 
@@ -219,9 +221,9 @@ Papel: supervisão técnica da integração dos resultados analíticos das Trilh
 
 ## 4. Próximos Passos
  
-Ações imediatas desbloqueadas hoje (07/08/2026):
+Ações imediatas desbloqueadas hoje (08/08/2026):
  
-1. **Fase 4** — iniciar construção física dos models de Mart (`models/marts/*.sql`), a partir de `docs/MODELO_DIMENSIONAL_GOLD.md`. Primeiro candidato natural: Fato Remuneração (mais simples, sem chave surrogate).
+1. **Sprint 4.2**, construir o Fato Remuneração (`models/marts/fatos/fato_remuneracao.sql`), primeiro fato da Fase 4, grão simples sem chave surrogate.
 2. **Verificação residual pendente** — confirmar via `INFORMATION_SCHEMA.COLUMNS` se a coluna `nome` está presente em `stg_siape__aposentados` e `stg_siape__afastamentos` (os dois modelos SIAPE ainda não checados). Os 3 modelos DEPRO e o modelo ENAP já têm schema confirmado sem coluna de nome de pessoa (DEPRO não tem; ENAP só tem `nome_curso`/`nome_turma`) — não precisam de nova verificação.
 3. **Sprint 1.9** — retomar levantamento das bases Observatório de Pessoal, PEP e avaliar disponibilidade da ACT Lemann (não bloqueante, pode correr em paralelo à Fase 4).
 4. **Sessão de Documentação Reversa (Produto 1)** — permanece planejada para o final da Camada Gold (Fase 4), conforme Seção 5.
