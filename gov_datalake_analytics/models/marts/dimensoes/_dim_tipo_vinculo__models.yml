@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: dim_tipo_vinculo
+    description: "Dimensão dos tipos de vinculos dos servidores"
+    columns:
+      - name: cod_tipo_vinculo
+        tests:
+          - not_null
+          - unique
+      - name: tipo_vinculo
+        tests:
+          - not_null
