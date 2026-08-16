@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: dim_pessoa_enap
+    description: "Dimensao de pessoa ENAP, codigo_pessoa como chave. Atributos em SCD Tipo 1 (mais recente por dt_matricula), exceto nacionalidade (estavel)"
+    columns:
+      - name: codigo_pessoa
+        tests:
+          - not_null
+          - unique
