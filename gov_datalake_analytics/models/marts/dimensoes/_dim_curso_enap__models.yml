@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: dim_curso_enap
+    description: "Dimensão dos cursos realizados na plataforma ENAP"
+    columns:
+      - name: cod_curso
+        tests:
+          - not_null
+          - unique
+      - name: modalidade_turma
+        tests:
+          - not_null
+      - name: nome_curso
+        tests:
+          - not_null
