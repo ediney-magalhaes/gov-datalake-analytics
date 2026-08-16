@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: dim_orgao_depro
+    description: "Dimensao dos orgaos DEPRO, com atributos descritivos em SCD Tipo 1 (mais recente). Reutilizada pelos 3 fatos DEPRO."
+    columns:
+      - name: orgao_codigo_siorg
+        tests:
+          - not_null
+          - unique
+      - name: orgao_nome
+        description: "Nulo para 11 orgaos que nunca apareceram em stg_depro__cargos (fonte de origem dos atributos descritivos)"
