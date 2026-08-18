@@ -2,7 +2,7 @@
 
 **Projeto:** Data Lake Analytics — Gestão de Pessoal (PNUD BRA/21/011 — MGI/SETE/SGP)
 **Sprint de origem:** 3.5 — Modelagem Dimensional Kimball
-**Status:** 8 fatos e 7 dimensões fechados (07/08/2026) — pronto para construção física na Fase 4
+**Status:** 8 fatos e 7 dimensões fechados (07/08/2026) — Fase 4 em andamento (7 dimensões e 1 fato concluídas)
 
 ---
 
@@ -37,6 +37,18 @@ Este documento é o insumo direto para:
 **Dimensões:**
 - `id_servidor_portal` → `dim_servidor`
 - `year` / `month` → `dim_tempo`
+- `cod_org_lotacao` → `dim_orgao_siape` (obtido por enriquecimento — ver achado abaixo)
+- `cod_tipo_vinculo` → `dim_tipo_vinculo` (obtido por enriquecimento — ver achado abaixo)
+
+**Enriquecimento via Fato Vínculo/Ativos (Sprint 4.2, 17/08/2026):**
+`stg_siape__remuneracao` não carrega `cod_org_lotacao` nem `cod_tipo_vinculo` — a fonte de Remuneração publica apenas valores monetários, sem contexto organizacional. Verificado empiricamente, população completa: 100% das 68.693.256 combinações `(id_servidor_portal, year, month)` de Remuneração têm correspondência em `stg_siape__ativos` (0 casos órfãos). Por essa cobertura total, `fct_remuneracao` busca `cod_org_lotacao`/`cod_tipo_vinculo` via `LEFT JOIN` contra `stg_siape__ativos`, pela mesma tríade de chave.
+
+**Achado — concomitância de vínculo propagada ao Fato Remuneração (Sprint 4.2, 17/08/2026):**
+O enriquecimento acima herda o fenômeno de vínculos concomitantes já documentado no ADR-017 e na seção 2.2. Verificado empiricamente, população completa: **273.249 servidores distintos** possuem mais de um vínculo ativo no mesmo `(year, month)`, totalizando **26.781.976 linhas envolvidas** em `stg_siape__ativos` (excluído o sentinela `-11`, tratado à parte).
+
+Como a fonte de Remuneração não distingue qual vínculo concomitante gerou o pagamento, atribuir um órgão/tipo de vínculo único de forma arbitrária corromperia justamente o fenômeno que o Estudo 3 da Trilha B (Fluxos e Fronteiras — Mobilidade Funcional e Institucional, Edital 02) e o Estudo 3 da Trilha C (Diversidade e Desigualdades, Edital 04) se propõem a investigar.
+
+**Decisão:** quando um servidor possui mais de um vínculo no mesmo mês, `cod_org_lotacao` e `cod_tipo_vinculo` são gravados como `NULL` em `fct_remuneracao` para aquele registro, as medidas de remuneração permanecem intactas e íntegras, apenas o contexto organizacional fica marcado como não atribuível. Mesmo princípio de tratamento já aplicado ao sentinela `-11`: a ambiguidade é um dado real da fonte, não um erro a mascarar.
 
 **Medidas:** todas as colunas com sufixo `_reais` da fonte, entre elas:
 - `remuneracao_basica_bruta_reais`
@@ -308,3 +320,4 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 | 07/08/2026 | Fato Capacitação ENAP: grão resolvido via `sk_matricula` (chave composta), não `cod_matricula` isolado | Sprint 3.5 — 172 colisões de `cod_matricula` em 19,3M linhas, confirmadas como matrículas genuinamente diferentes (hash truncado sem unicidade global garantida) |
 | 07/08/2026 | Bug de tipo `idade`/`carga_horaria` (INT64 vs STRING entre partições) corrigido: reescrita das 132 partições Bronze + External Table recriada sem `autodetect` | Sprint 3.5 — causa raiz: `pl.scan_csv()` sem `schema_overrides`, inferência de tipo inconsistente entre as 132 partições mensais |
 | 07/08/2026 | Ponte Capacitação × Mês (factless) formalizada como pendência arquitetural, construção física deferida para a Fase 4 | Sprint 3.5 — decisão de partição por `dt_inicio` já tomada em 29/06; exposição/estoque mensal de cursos multi-mês não resolvida no fato transacional |
+| 17/08/2026 | Fato Remuneração fisicamente construído na Fase 4 (Sprint 4.2); FKs de órgão/tipo de vínculo obtidas por enriquecimento via `stg_siape__ativos`, com `NULL` proposital nos ~273k servidores com concomitância de vínculo no mês | Sprint 4.2 — fonte de Remuneração não carrega contexto organizacional; atribuição arbitrária corromperia o fenômeno de mobilidade institucional investigado pelo Estudo 3 (Editais 02 e 04) |

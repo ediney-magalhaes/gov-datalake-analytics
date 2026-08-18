@@ -30,4 +30,7 @@ models:
       +materialized: view
     marts:
       +schema: ouro
-      +materialized: view
+      dimensoes:
+        +materialized: view
+      fatos:
+        +materialized: table
