@@ -120,32 +120,41 @@ Consequência: milhões de servidores diferentes compartilham a mesma chave fals
 
 **Fonte (Prata):** `stg_siape__aposentados`
 
-**Natureza do fato:** apesar do nome herdado da fonte, esta tabela não representa um evento exclusivo de aposentadoria — é um **retrato mensal da situação de vínculo** de cada registro, do qual `APOSENTADO` (29.941.096 linhas) é apenas uma das 45 categorias possíveis de `situacao_vinculo` (outras incluem `ATIVO PERMANENTE`, `CEDIDO/REQUISITADO`, `CONTRATO TEMPORARIO`, `CELETISTA/EMPREGADO`, `Sigiloso`, entre outras). Por isso, adota-se **um único Fato genérico**, reutilizável pelos Estudos 3 (Fluxos e Fronteiras) e 4 (Contratações Temporárias) via filtro em `situacao_vinculo`, em vez de fatos separados por categoria — decisão alinhada ao princípio de que fatos separados exigiriam uma classificação de negócio não pedida pelos editais.
+**Natureza do fato:** apesar do nome herdado da fonte, esta tabela não representa um evento exclusivo de aposentadoria, é um **retrato mensal da situação de vínculo** de cada registro, do qual `APOSENTADO` (29.941.096 linhas) é apenas uma das 45 categorias possíveis de `situacao_vinculo` (outras incluem `ATIVO PERMANENTE`, `CEDIDO/REQUISITADO`, `CONTRATO TEMPORARIO`, `CELETISTA/EMPREGADO`, `Sigiloso`, entre outras). Por isso, adota-se **um único Fato genérico**, reutilizável pelos Estudos 3 (Fluxos e Fronteiras) e 4 (Contratações Temporárias) via filtro em `situacao_vinculo`, em vez de fatos separados por categoria — decisão alinhada ao princípio de que fatos separados exigiriam uma classificação de negócio não pedida pelos editais.
 
 **Tipo de fato: Factless (sem medida numérica aditiva).** Verificado no schema: as colunas exclusivas desta fonte em relação a Ativos (`cod_tipo_aposentadoria`, `tipo_aposentadoria`, `data_aposentadoria`) são categóricas/data, não numéricas. Não há valor de proventos, tempo de contribuição ou qualquer grandeza somável na fonte. O grão é a **ocorrência** do vínculo naquela situação, não uma quantidade.
 
-**Grão:** um registro por **vínculo** de servidor por mês (mesmo padrão de Ativos) — resolvido por chave surrogate técnica:
+**Grão — revalidado (Sprint 4.4, 21/08/2026):** a composição provisória da Sprint 3.5 (6 colunas, resíduo de 13.088 grupos nunca investigado caso a caso) foi descartada e revalidada do zero contra o schema real de `stg_siape__aposentados` na Fase 4. Achado estrutural relevante: esta fonte **não possui** a coluna `cod_uorg_exercicio` que fechou o grão de Ativos (seção 2.2), o schema de Aposentados só tem a família "lotação" (`cod_uorg_lotacao`, `cod_org_lotacao`, `cod_orgsup_lotacao`), sem conceito de "exercício". Isso é coerente com a natureza do dado: exercício representa onde o servidor trabalha ativamente no dia a dia, conceito que não se aplica a quem já está aposentado. Consequência prática: a chave de 8 colunas do ADR-017 não pôde ser reaproveitada — a construção da chave desta sprint partiu do zero, reaproveitando apenas o *processo* empírico incremental (nunca a composição de colunas).
+
+Verificado empiricamente (21/08/2026), população completa (`GROUP BY` + `HAVING COUNT(*) > 1`), excluindo o sentinela `-11`:
+- Grão simples (`id_servidor_portal + year + month`): **6.971.333 grupos duplicados**.
+- Teste incremental de colunas candidatas, isoladas contra o baseline: `cod_tipo_vinculo` (-87,4%, dominante — diferente de Ativos, onde `situacao_vinculo` foi a coluna dominante), `situacao_vinculo` (-14,7%), `matricula` (-11,6%), `cod_uorg_lotacao` (-10,7%), `data_aposentadoria` (-8,0%), `cod_org_lotacao` (-6,2%), `cod_tipo_aposentadoria` (-0,9%).
+- Chave final combinada: **0 grupos duplicados** em população completa com 7 colunas.
+
+`sk_situacao_vinculo` é gerada por **7 colunas** (nome escolhido deliberadamente diferente de `sk_vinculo`, para não colidir semanticamente com a chave de Ativos, que tem composição diferente):
 
 ```sql
-{{ dbt_utils.generate_surrogate_key(['id_servidor_portal', 'year', 'month', 'cod_tipo_vinculo', 'matricula', 'cod_org_lotacao']) }} as sk_vinculo
+{{ dbt_utils.generate_surrogate_key(['id_servidor_portal', 'year', 'month', 'cod_tipo_vinculo', 'situacao_vinculo', 'matricula', 'cod_org_lotacao']) }} as sk_situacao_vinculo
 ```
 
-> Verificado empiricamente (07/08/2026), população completa (`GROUP BY` + `HAVING COUNT(*) > 1`):
-> - Grão simples (`id_servidor_portal + year + month`): **6.971.465 grupos duplicados** — confirma que a mesma causa raiz de vínculos concomitantes de Ativos também ocorre aqui, proporcionalmente pior.
-> - Grão com as 6 colunas de `sk_vinculo`: resíduo de **13.088 grupos** (redução de 99,81%). Resíduo aceito e registrado como conhecido, mesmo critério aplicado em Ativos (ADR-017) — não bloqueia a modelagem.
+**Teste de necessidade da chave:** cada uma das 4 últimas colunas testadas (`cod_tipo_vinculo`, `situacao_vinculo`, `matricula`, `cod_org_lotacao`) foi confirmada como necessária — a remoção de `cod_org_lotacao` sozinha reabre resíduo de 327.092 grupos, confirmando que nenhuma das 7 colunas é redundante.
+
+**Construção física (Sprint 4.4, 21/08/2026):** `fct_situacao_vinculo` materializado com 76.314.587 linhas, validado como equivalente a 100% de `SELECT COUNT(*) FROM stg_siape__aposentados WHERE id_servidor_portal != '-11'`. Coluna derivada `ano_mes` adicionada ao fato, mesmo padrão da seção 2.2, para viabilizar teste `relationships` composto contra `dim_tempo.ano_mes`. 13/13 testes dbt aprovados.
 
 **Dimensões:**
 - `id_servidor_portal` → `dim_servidor`
-- `year` / `month` → `dim_tempo`
+- `year` / `month` → `dim_tempo` (via `ano_mes`)
 - `cod_org_lotacao` → `dim_orgao_siape`
-- `cod_tipo_vinculo` / `tipo_vinculo` → `dim_tipo_vinculo`
+- `cod_tipo_vinculo` → `dim_tipo_vinculo`
 
-**Atributos degenerados** (viajam com o fato, sem dimensão própria — categóricos exclusivos desta fonte, sem tabela de apoio nem reutilização fora deste fato):
-- `situacao_vinculo` (as 45 categorias — chave de filtro para os Estudos 3 e 4)
+**Atributos degenerados** (viajam com o fato, sem dimensão própria, categóricos exclusivos desta fonte, sem tabela de apoio nem reutilização fora deste fato):
+- `situacao_vinculo` (as 45 categorias, chave de filtro para os Estudos 3 e 4; também é coluna de grão, não apenas atributo)
+- `matricula` (coluna de grão)
 - `cod_tipo_aposentadoria` / `tipo_aposentadoria`
 - `data_aposentadoria`
+- `descricao_cargo`, `tipo_vinculo`, `regime_juridico`
 
-**Achado — valor sentinela confirmado (Sprint 3.5, 07/08/2026):**
+**Achado — valor sentinela confirmado (Sprint 3.5, 07/08/2026, mantido):**
 `id_servidor_portal = '-11'` ocorre em **1.746.006 linhas**, e o total coincide exatamente com a contagem de `situacao_vinculo = 'Sigiloso'` (1.746.006). Confirma que `-11` é o mesmo placeholder de sigilo legal já identificado em Ativos (seção 2.2), agora comprovado como fenômeno transversal da base SIAPE, não específico de uma fonte.
 
 **Decisões e exclusões:**
@@ -333,3 +342,4 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 | 07/08/2026 | Ponte Capacitação × Mês (factless) formalizada como pendência arquitetural, construção física deferida para a Fase 4 | Sprint 3.5 — decisão de partição por `dt_inicio` já tomada em 29/06; exposição/estoque mensal de cursos multi-mês não resolvida no fato transacional |
 | 17/08/2026 | Fato Remuneração fisicamente construído na Fase 4 (Sprint 4.2); FKs de órgão/tipo de vínculo obtidas por enriquecimento via `stg_siape__ativos`, com `NULL` proposital nos ~273k servidores com concomitância de vínculo no mês | Sprint 4.2 — fonte de Remuneração não carrega contexto organizacional; atribuição arbitrária corromperia o fenômeno de mobilidade institucional investigado pelo Estudo 3 (Editais 02 e 04) |
 | 17/08/2026 | ADR-017 atualizado: `sk_vinculo` passa de 6 para 8 colunas (`+matricula`, `+situacao_vinculo`, `+cod_uorg_exercicio`); Fato Vínculo/Ativos fisicamente construído na Fase 4 (Sprint 4.3), 96.563.830 linhas, 11/11 testes dbt aprovados | Sprint 4.3 — schema real de `stg_siape__ativos` na Fase 4 mais rico que o disponível na Sprint 3.5; validação incremental em população completa (nunca amostra) reduziu resíduo de 242.588 → 0 grupos duplicados |
+| 21/08/2026 | Grão do Fato Situação de Vínculo revalidado na Fase 4 (Sprint 4.4): composição provisória da Sprint 3.5 (6 colunas) descartada; nova chave de 7 colunas (`sk_situacao_vinculo`) fecha 100% do grão em população completa | Sprint 4.4 `stg_siape__aposentados` não possui `cod_uorg_exercicio` (existe apenas em Ativos), tornando a chave de 8 colunas do ADR-017 inaplicável; `cod_tipo_vinculo` (não `situacao_vinculo`) foi a coluna dominante nesta fonte, padrão inverso ao de Ativos; `fct_situacao_vinculo` materializado, 76.314.587 linhas, 13/13 testes dbt aprovados |
