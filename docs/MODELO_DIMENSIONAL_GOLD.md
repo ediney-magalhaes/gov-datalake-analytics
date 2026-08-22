@@ -79,13 +79,23 @@ Como a fonte de Remuneração não distingue qual vínculo concomitante gerou o 
 
 **Grão:** um registro por **vínculo** de servidor por mês — não por servidor. Um mesmo `id_servidor_portal` pode legitimamente gerar múltiplas linhas no mesmo `year`/`month` quando o servidor possui mais de um vínculo simultâneo (ver ADR-017: cargo + função, múltiplas matrículas, múltiplos órgãos).
 
-**Resolução do ADR-017 (Sprint 3.5, 06/08/2026):** como não existe uma única coluna de negócio capaz de diferenciar todos os casos de vínculo concomitante (cada causa investigada usava uma coluna diferenciadora distinta — `cod_tipo_vinculo`, `matricula`, `cod_org_lotacao`), o grão é resolvido por **chave surrogate técnica**, gerada via `dbt_utils.generate_surrogate_key`:
+**Resolução do ADR-017 — atualizada (Sprint 4.3, 17/08/2026):** a composição original de 6 colunas (Sprint 3.5) foi revalidada com o schema real de `stg_siape__ativos`, que na Fase 4 se mostrou mais rico do que o disponível na Sprint 3.5 (43 colunas, incluindo blocos de cargo, função comissionada e exercício antes não mapeados em detalhe). Teste empírico em população completa mostrou que as 6 colunas originais não fechavam o grão: restavam 242.588 grupos duplicados. Investigação incremental, sempre validada em população completa (nunca por amostra), identificou duas colunas adicionais necessárias — `matricula` e `situacao_vinculo` — reduzindo o resíduo em etapas (242.588 → 324 → 9 grupos).
+
+`sk_vinculo` passa a ser gerada por **8 colunas**, superando o ADR-017 original:
 
 ```sql
-{{ dbt_utils.generate_surrogate_key(['id_servidor_portal', 'year', 'month', 'cod_tipo_vinculo', 'matricula', 'cod_org_lotacao']) }} as sk_vinculo
+{{ dbt_utils.generate_surrogate_key(['id_servidor_portal', 'year', 'month', 'cod_org_lotacao', 'cod_tipo_vinculo', 'matricula', 'situacao_vinculo', 'cod_uorg_exercicio']) }} as sk_vinculo
 ```
 
-`sk_vinculo` passa a ser a chave primária técnica do fato. O teste de unicidade (`unique`/`not_null`) deferido na Silver (ADR-017) deve ser aplicado sobre `sk_vinculo` nesta camada, ao construir o model físico na Fase 4 — não sobre `id_servidor_portal` isoladamente. Qualquer resíduo de duplicidade restante após a chave surrogate deve ser investigado como caso novo, não presumido resolvido.
+Verificado empiricamente (17/08/2026), população completa: **0 grupos duplicados** nesse grão de 8 colunas.
+
+**Resíduo residual aceito:** dos 324 grupos que restavam após 7 colunas, `situacao_vinculo` isolada resolvia 315 (97,2%). Os 9 grupos remanescentes (≈20-27 linhas, envolvendo servidores com múltiplos registros de `cod_uorg_exercicio` no mesmo mês — ex.: cessão/exercício em mais de um órgão simultaneamente) foram investigados individualmente (não por amostra genérica) e resolvidos com a 8ª coluna, `cod_uorg_exercicio`. Proporção do resíduo antes da 8ª coluna: 9 grupos em ~13,3M combinações possíveis (<0,0001%) — mesmo padrão de tratamento de ruído desprezível de fonte já aplicado ao sentinela `-11`.
+
+**Implicação analítica — `sk_vinculo` não é identificador estável de pessoa ao longo do tempo:** como `situacao_vinculo` e `cod_uorg_exercicio` compõem a chave, uma mudança em qualquer um desses atributos (ex.: servidor que passa de "ATIVO PERMANENTE" para "CEDIDO", ou muda de UORG de exercício) gera uma **nova** `sk_vinculo` para a mesma pessoa/cargo. Isso é o comportamento correto para os Estudos de mobilidade (Estudo 3, Trilha B/C a mudança em si é o evento de interesse), mas significa que análises de trajetória/coorte (Estudo 1, Trilha B) não podem usar `sk_vinculo` como chave de rastreamento de indivíduo ao longo do tempo apenas `id_servidor_portal` cumpre esse papel (exceto no subconjunto sob sentinela `-11`, onde nem `id_servidor_portal` identifica indivíduo).
+
+**Construção física (Sprint 4.3, 17/08/2026):** `fct_vinculo_ativos` materializado com 96.563.830 linhas, validado como equivalente a 100% de `SELECT COUNT(*) FROM stg_siape__ativos WHERE id_servidor_portal != '-11'`, confirmando que a geração de `sk_vinculo` não duplicou nem perdeu linhas da origem. Coluna derivada `ano_mes` (`CONCAT(year, '-', LPAD(month, 2, '0'))`) adicionada ao fato especificamente para permitir teste `relationships` composto contra `dim_tempo.ano_mes` — testes `relationships` isolados sobre `year` e `month` separadamente foram descartados por não validarem a combinação real (mesmo problema estrutural que motivou a chave composta do próprio `sk_vinculo`). 11/11 testes dbt aprovados.
+
+`sk_vinculo` passa a ser a chave primária técnica do fato. O teste de unicidade (`unique`/`not_null`) deve ser aplicado sobre `sk_vinculo`, não sobre `id_servidor_portal` isoladamente. Qualquer resíduo de duplicidade restante após a chave surrogate deve ser investigado como caso novo, não presumido resolvido.
 
 **Dimensões:**
 - `id_servidor_portal` → `dim_servidor`
@@ -268,6 +278,7 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 
 ### 3.2 `dim_tempo`
 - Chave: `year` + `month`
+- Possui coluna `ano_mes` (concatenação `year-month`, com padding de 2 dígitos no mês), usada como chave de teste `relationships` composta por fatos que precisam validar a combinação ano+mês de uma vez (ver Fato Vínculo/Ativos, seção 2.2)
 
 ### 3.3 `dim_orgao_siape`
 - Chave: `cod_org_lotacao`
@@ -321,3 +332,4 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 | 07/08/2026 | Bug de tipo `idade`/`carga_horaria` (INT64 vs STRING entre partições) corrigido: reescrita das 132 partições Bronze + External Table recriada sem `autodetect` | Sprint 3.5 — causa raiz: `pl.scan_csv()` sem `schema_overrides`, inferência de tipo inconsistente entre as 132 partições mensais |
 | 07/08/2026 | Ponte Capacitação × Mês (factless) formalizada como pendência arquitetural, construção física deferida para a Fase 4 | Sprint 3.5 — decisão de partição por `dt_inicio` já tomada em 29/06; exposição/estoque mensal de cursos multi-mês não resolvida no fato transacional |
 | 17/08/2026 | Fato Remuneração fisicamente construído na Fase 4 (Sprint 4.2); FKs de órgão/tipo de vínculo obtidas por enriquecimento via `stg_siape__ativos`, com `NULL` proposital nos ~273k servidores com concomitância de vínculo no mês | Sprint 4.2 — fonte de Remuneração não carrega contexto organizacional; atribuição arbitrária corromperia o fenômeno de mobilidade institucional investigado pelo Estudo 3 (Editais 02 e 04) |
+| 17/08/2026 | ADR-017 atualizado: `sk_vinculo` passa de 6 para 8 colunas (`+matricula`, `+situacao_vinculo`, `+cod_uorg_exercicio`); Fato Vínculo/Ativos fisicamente construído na Fase 4 (Sprint 4.3), 96.563.830 linhas, 11/11 testes dbt aprovados | Sprint 4.3 — schema real de `stg_siape__ativos` na Fase 4 mais rico que o disponível na Sprint 3.5; validação incremental em população completa (nunca amostra) reduziu resíduo de 242.588 → 0 grupos duplicados |
