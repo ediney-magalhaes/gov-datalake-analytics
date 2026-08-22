@@ -141,7 +141,7 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 | Sprint | Entrega | Status |
 |:-------|:--------|:------:|
 | 4.1 | Dimensões compartilhadas: `dim_tempo`, `dim_servidor`, `dim_orgao_siape`, `dim_tipo_vinculo`, `dim_orgao_depro`, `dim_pessoa_enap`, `dim_curso_enap`. 7 dimensões construídas com SCD Tipo 1 nos atributos instáveis (identificados empiricamente, nao presumidos): `nome` (dim_servidor), `orgsup_lotacao` (dim_orgao_siape), praticamente todos os atributos de `dim_orgao_depro` (nenhum estável), `raca`/`uf_pessoa`/`municipio_pessoa`/`instituicao`/`poder`/`esfera` (dim_pessoa_enap), `nome_curso`/`conteudista`/`tematica` (dim_curso_enap). Configuração de schema por camada implementada (`macro generate_schema_name.sql` + `dbt_project.yml`, staging para `prata`, marts para `ouro`) | ✅ Concluído (08/08/2026) |
-| 4.2 | Fato Remuneração (grão `id_servidor_portal + year + month`, sem chave surrogate) | ⏳ Pendente |
+| 4.2 | Fato Remuneração (grão `id_servidor_portal + year + month`, sem chave surrogate) | ✅ Concluído (17/08/2026) |
 | 4.3 | Fato Vínculo/Ativos (chave surrogate `sk_vinculo`, 6 colunas, ADR-017) | ⏳ Pendente |
 | 4.4 | Fato Situação de Vínculo (reaproveita `stg_siape__aposentados`, mesma lógica de `sk_vinculo`, 45 categorias de `situacao_vinculo`) | ⏳ Pendente |
 | 4.5 | Fato Afastamentos (grão `id_servidor_portal + year + month + datas`) | ⏳ Pendente |
@@ -156,6 +156,7 @@ Entregas previstas: validação de contract drift (mudanças de schema na origem
 **Bloqueios ativos:** Nenhum.
 
 **Achados da Sprint 4.1, relevantes para as próximas sprints:** múltiplas suposições de estabilidade se mostraram falsas ao testar com população completa (nome de servidor pode mudar por casamento/retificação; nome/sigla de órgão DEPRO muda por reforma administrativa; `raca` em ENAP é resposta declarada por matrícula, não atributo fixo). Princípio reforçado para as sprints 4.2 em diante: nenhuma coluna descritiva deve ser tratada como estável em fato ou dimensão sem teste empírico prévio.
+**Achados da Sprint 4.2, relevantes para as próximas sprints:** confirmada cobertura de 100% entre `stg_siape__remuneracao` e `stg_siape__ativos` na tríade `id_servidor_portal + year + month` (68.693.256 combinações, 0 órfãos) — decisão que permite enriquecimento via `LEFT JOIN` sem perda de linhas. Identificada e tratada a concomitência de vínculo (273.249 servidores, 26,8M linhas em `stg_siape__ativos`, fora do sentinela `-11`): quando um servidor tem mais de um vínculo ativo no mesmo mês, `cod_org_lotacao`/`cod_tipo_vinculo` ficam `NULL` em `fct_remuneracao`, preservando o fenômeno de mobilidade institucional que os Estudos 3 (Editais 02 e 04) investigam, em vez de atribuir um órgão arbitrário. Essa mesma concomitência é a origem estrutural do ADR-017, que a Sprint 4.3 vai formalizar como grão do Fato Vínculo/Ativos.
 
 ---
 
