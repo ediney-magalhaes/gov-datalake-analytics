@@ -1,0 +1,55 @@
+﻿version: 2
+
+models:
+  - name: fct_situacao_vinculo
+    description: "Fato sobre a situacao de vinculo dos servidores"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - id_servidor_portal
+              - year
+              - month
+              - cod_tipo_vinculo
+              - situacao_vinculo
+              - matricula
+              - cod_org_lotacao
+    columns:
+      - name: id_servidor_portal
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_servidor')
+                field: id_servidor_portal
+          - not_null
+      - name: ano_mes
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_tempo')
+                field: ano_mes
+          - not_null
+      - name: cod_tipo_vinculo
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_tipo_vinculo')
+                field: cod_tipo_vinculo
+          - not_null
+      - name: cod_org_lotacao
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_orgao_siape')
+                field: cod_org_lotacao
+          - not_null
+      - name: sk_situacao_vinculo
+        tests:
+          - unique
+          - not_null
+      - name: matricula
+        tests:
+          - not_null
+      - name: situacao_vinculo
+        tests:
+          - not_null
