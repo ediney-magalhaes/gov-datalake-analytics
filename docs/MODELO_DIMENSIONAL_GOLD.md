@@ -166,21 +166,30 @@ Verificado empiricamente (21/08/2026), população completa (`GROUP BY` + `HAVIN
 
 **Fonte (Prata):** `stg_siape__afastamentos`
 
-**Tipo de fato: Factless.** Schema enxuto (11 colunas): `id_servidor_portal`, `year`, `month`, `hash_cpf`, `data_inicio_afastamento`, `data_fim_afastamento` + metadados. Sem `cod_org_lotacao`, `cod_tipo_vinculo` nem `matricula` — não carrega órgão nem tipo de vínculo, portanto `dim_orgao_siape` e `dim_tipo_vinculo` não se aplicam a este fato.
+**Tipo de fato: Factless.** Schema enxuto (11 colunas): `id_servidor_portal`, `year`, `month`, `hash_cpf`, `data_inicio_afastamento`, `data_fim_afastamento` + metadados. Sem `cod_org_lotacao`, `cod_tipo_vinculo` nem `matricula`, não carrega órgão nem tipo de vínculo, portanto `dim_orgao_siape` e `dim_tipo_vinculo` não se aplicam a este fato.
 
 **Grão:** `id_servidor_portal + year + month + data_inicio_afastamento + data_fim_afastamento`.
 
-> **Bug de duplicação exata descoberto e corrigido (Sprint 3.5, 07/08/2026):** grão simples (`id_servidor_portal + year + month`) tinha 362.695 grupos duplicados. Grão estendido com as datas reduziu para 228.704 — praticamente inalterado, indicando que a causa não era concomitância legítima. Investigação de exemplo real (5 linhas de um mesmo grupo) confirmou linhas **bit-a-bit idênticas**, inclusive `ingestion_timestamp` — duplicação exata de linha na Bronze/Silver, não fenômeno de negócio. Escala confirmada: 228.704 grupos duplicados exatos, 457.863 linhas envolvidas, 229.159 linhas excedentes (~2,46% da tabela).
+> **Bug de duplicação exata descoberto e corrigido (Sprint 3.5, 07/08/2026):** grão simples (`id_servidor_portal + year + month`) tinha 362.695 grupos duplicados. Grão estendido com as datas reduziu para 228.704, praticamente inalterado, indicando que a causa não era concomitância legítima. Investigação de exemplo real (5 linhas de um mesmo grupo) confirmou linhas **bit-a-bit idênticas**, inclusive `ingestion_timestamp`, duplicação exata de linha na Bronze/Silver, não fenômeno de negócio. Escala confirmada: 228.704 grupos duplicados exatos, 457.863 linhas envolvidas, 229.159 linhas excedentes (~2,46% da tabela).
 >
 > **Correção aplicada:** `select * from final` alterado para `select distinct * from final` em `stg_siape__afastamentos.sql` (commit `fix:` dedicado). Revalidado após `dbt run`: **0 grupos duplicados** no grão estendido.
 
+**Revalidação na Fase 4 (Sprint 4.5, 24/08/2026):** o grão registrado na Sprint 3.5 foi reconfirmado empiricamente contra o schema atual, não presumido. Grão simples (`id_servidor_portal + year + month`): **158.678 grupos duplicados** (número menor que os 362.695 originais, coerente com o efeito do `DISTINCT` aplicado na Silver desde a correção). Grão estendido com as duas datas: **0 grupos duplicados** em população completa, confirma que a correção de 07/08/2026 continua efetiva e nenhuma coluna adicional é necessária.
+
+Sentinela `id_servidor_portal = '-11'` revalidado: **0 ocorrências**, achado da Sprint 3.5 confirmado sem alteração. As 173 linhas com `data_inicio_afastamento` e `data_fim_afastamento` ambas nulas também revalidadas: contagem idêntica (173), decisão de exclusão mantida sem mudança.
+
+**Decisão de chave — sem surrogate key:** diferente de Vínculo/Ativos e Situação de Vínculo (7-8 colunas, `sk_*`), `fct_afastamentos` usa exclusivamente a combinação de colunas naturais como grão, sem chave surrogate técnica. Critério aplicado: grão com 5 colunas naturais e legíveis não justifica o custo de uma `sk_*`, mesmo padrão já usado em `fct_remuneracao` (grão de 3 colunas). Surrogate key só se justifica quando o grão natural é extenso o suficiente para prejudicar legibilidade/uso em joins e testes (caso de Vínculo/Ativos e Situação de Vínculo).
+
+**Construção física (Sprint 4.5, 24/08/2026):** `fct_afastamentos` materializado com 9.069.323 linhas, validado como equivalente a 100% de `SELECT COUNT(*) FROM stg_siape__afastamentos WHERE data_inicio_afastamento IS NOT NULL OR data_fim_afastamento IS NOT NULL`. Coluna derivada `ano_mes` adicionada, mesmo padrão dos fatos anteriores, para viabilizar teste `relationships` composto contra `dim_tempo.ano_mes`. `hash_cpf` excluído do fato, sem uso analítico direto nos estudos, já disponível via join com `dim_servidor` por `id_servidor_portal`. 5/5 testes dbt aprovados.
+
 **Dimensões:**
 - `id_servidor_portal` → `dim_servidor`
-- `year` / `month` → `dim_tempo`
+- `year` / `month` → `dim_tempo` (via `ano_mes`)
 
 **Decisões e exclusões:**
-- As 173 linhas com `data_inicio_afastamento` e `data_fim_afastamento` ambas nulas são excluídas na construção da Mart (decisão da Sprint 3.4): `WHERE data_inicio_afastamento IS NOT NULL OR data_fim_afastamento IS NOT NULL`.
-- Sentinela `id_servidor_portal = '-11'` **confirmado ausente** nesta fonte (0 ocorrências) — coerente com a tabela não carregar `descricao_cargo`/`situacao_vinculo`.
+- As 173 linhas com `data_inicio_afastamento` e `data_fim_afastamento` ambas nulas são excluídas na construção da Mart: `WHERE data_inicio_afastamento IS NOT NULL OR data_fim_afastamento IS NOT NULL`.
+- Sentinela `id_servidor_portal = '-11'` **confirmado ausente** nesta fonte (0 ocorrências), coerente com a tabela não carregar `descricao_cargo`/`situacao_vinculo`.
+- `hash_cpf` excluído do fato físico (redundante com `dim_servidor`, sem uso nos estudos).
 
 ---
 
@@ -343,3 +352,4 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 | 17/08/2026 | Fato Remuneração fisicamente construído na Fase 4 (Sprint 4.2); FKs de órgão/tipo de vínculo obtidas por enriquecimento via `stg_siape__ativos`, com `NULL` proposital nos ~273k servidores com concomitância de vínculo no mês | Sprint 4.2 — fonte de Remuneração não carrega contexto organizacional; atribuição arbitrária corromperia o fenômeno de mobilidade institucional investigado pelo Estudo 3 (Editais 02 e 04) |
 | 17/08/2026 | ADR-017 atualizado: `sk_vinculo` passa de 6 para 8 colunas (`+matricula`, `+situacao_vinculo`, `+cod_uorg_exercicio`); Fato Vínculo/Ativos fisicamente construído na Fase 4 (Sprint 4.3), 96.563.830 linhas, 11/11 testes dbt aprovados | Sprint 4.3 — schema real de `stg_siape__ativos` na Fase 4 mais rico que o disponível na Sprint 3.5; validação incremental em população completa (nunca amostra) reduziu resíduo de 242.588 → 0 grupos duplicados |
 | 21/08/2026 | Grão do Fato Situação de Vínculo revalidado na Fase 4 (Sprint 4.4): composição provisória da Sprint 3.5 (6 colunas) descartada; nova chave de 7 colunas (`sk_situacao_vinculo`) fecha 100% do grão em população completa | Sprint 4.4 `stg_siape__aposentados` não possui `cod_uorg_exercicio` (existe apenas em Ativos), tornando a chave de 8 colunas do ADR-017 inaplicável; `cod_tipo_vinculo` (não `situacao_vinculo`) foi a coluna dominante nesta fonte, padrão inverso ao de Ativos; `fct_situacao_vinculo` materializado, 76.314.587 linhas, 13/13 testes dbt aprovados |
+| 24/08/2026 | Grão do Fato Afastamentos revalidado na Fase 4 (Sprint 4.5): 5 colunas naturais confirmam 0 grupos duplicados em população completa; decisão de não usar chave surrogate, critério de "grão enxuto" formalizado | Sprint 4.5, `fct_afastamentos` materializado, 9.069.323 linhas, 5/5 testes dbt aprovados; achados da Sprint 3.5 (bug de duplicação exata corrigido, sentinela `-11` ausente, 173 linhas nulas excluídas) todos revalidados sem alteração |
