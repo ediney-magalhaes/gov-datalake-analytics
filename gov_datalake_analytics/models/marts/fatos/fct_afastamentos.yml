@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: fct_afastamentos
+    description: "Fato sobre período de afastamento dos servidores"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - id_servidor_portal
+              - year
+              - month
+              - data_inicio_afastamento
+              - data_fim_afastamento
+    columns:
+      - name: id_servidor_portal
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_servidor')
+                field: id_servidor_portal
+          - not_null
+      - name: ano_mes
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_tempo')
+                field: ano_mes
+          - not_null
