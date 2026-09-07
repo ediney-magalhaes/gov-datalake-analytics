@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: fct_depro_cargos
+    description: "Fato dos cargos dos servidores por órgão, grão orgao_codigo_siorg + year + month + carreira + grupo_cargo + cargo. Contagem da quantidade agregada via SUM."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - orgao_codigo_siorg
+              - year
+              - month
+              - carreira
+              - grupo_cargo
+              - cargo
+    columns:
+      - name: orgao_codigo_siorg
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_orgao_depro')
+                field: orgao_codigo_siorg
+      - name: ano_mes
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tempo')
+                field: ano_mes
+      - name: carreira
+        tests:
+          - not_null
+      - name: grupo_cargo
+        tests:
+          - not_null:
+              config:
+                where: "carreira != 'PLANO ESPECIAL DE CARGOS DA FUNAI - PECFUNAI'"
+      - name: cargo
+        tests:
+          - not_null

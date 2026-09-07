@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: fct_depro_aposentadorias
+    description: "Fato das aposentadorias dos servidores, grão orgao_codigo_siorg + year + month + ano_aposentadoria,
+        faixa_etaria + natureza_juridica + escolaridade_cargo + plano_carreira + grupo_cargo + cargo + sexo. Contagem da quantidade agregada via SUM."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - orgao_codigo_siorg
+              - year
+              - month
+              - ano_aposentadoria
+              - faixa_etaria
+              - natureza_juridica
+              - escolaridade_cargo
+              - plano_carreira
+              - grupo_cargo
+              - cargo
+              - sexo
+    columns:
+      - name: orgao_codigo_siorg
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_orgao_depro')
+                field: orgao_codigo_siorg
+      - name: ano_mes
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_tempo')
+                field: ano_mes
+      - name: ano_aposentadoria
+        tests:
+          - not_null
+      - name: faixa_etaria
+        tests:
+          - not_null
+      - name: natureza_juridica
+        tests:
+          - not_null
+      - name: escolaridade_cargo
+        tests:
+          - not_null
+      - name: plano_carreira
+        tests:
+          - not_null:
+              config:
+                where: "NOT (((year = 2025 AND month BETWEEN 7 AND 12) OR (year = 2026 AND month IN (1,2))) OR (year = 2024 AND month BETWEEN 2 AND 5))"
+      - name: grupo_cargo
+        tests:
+          - not_null:
+              config:
+                where: "NOT (((year = 2025 AND month BETWEEN 7 AND 12) OR (year = 2026 AND month IN (1,2))) OR (year = 2024 AND month BETWEEN 2 AND 5))"
+      - name: cargo
+        tests:
+          - not_null:
+              config:
+                where: "NOT ((year = 2025 AND month BETWEEN 7 AND 12) OR (year = 2026 AND month IN (1,2)))"
+      - name: sexo
+        tests:
+          - not_null
