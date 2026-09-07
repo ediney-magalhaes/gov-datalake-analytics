@@ -2,7 +2,7 @@
 
 **Projeto:** Data Lake Analytics — Gestão de Pessoal (PNUD BRA/21/011 — MGI/SETE/SGP)
 **Sprint de origem:** 3.5 — Modelagem Dimensional Kimball
-**Status:** 8 fatos e 7 dimensões fechados (07/08/2026) — Fase 4 em andamento (7 dimensões e 1 fato concluídas)
+**Status:** 8 fatos e 7 dimensões fechados (07/08/2026) — Fase 4 em andamento (7 dimensões e 4 fatos concluídos)
 
 ---
 
@@ -197,19 +197,23 @@ Sentinela `id_servidor_portal = '-11'` revalidado: **0 ocorrências**, achado da
 
 **Fonte (Prata):** `stg_depro__cargos`
 
-**Tipo de fato: com medida (não factless).** Diferente das fontes SIAPE, DEPRO traz contagens agregadas por órgão — não há `id_servidor_portal`, é dado pré-agregado no nível de órgão, mesmo padrão já estabelecido para o PEP (fato independente, sem join individual).
+**Tipo de fato: com medida.** Diferente das fontes SIAPE, DEPRO traz contagens agregadas por órgão — não há `id_servidor_portal` em nenhuma das 3 fontes DEPRO (achado confirmado na Sprint 4.6, ver nota sobre o ADR-009 ao final desta seção).
 
-**Grão:** `orgao_codigo_siorg + carreira + grupo_cargo + cargo + year + month`.
+**Grão:** `orgao_codigo_siorg + year + month + carreira + grupo_cargo + cargo`.
 
-> Verificado empiricamente (07/08/2026): 0 grupos duplicados nesse grão, população completa.
+> **Construção física e revalidação (Sprint 4.6, 06/09/2026):** grão confirmado empiricamente em população completa, 0 grupos duplicados nas 6 colunas. Processo de descoberta incremental: grão simples (`orgao_codigo_siorg + year + month`) tinha 2.329 grupos duplicados; adicionar `cargo` isoladamente **aumentou** a contagem para 4.119 grupos (efeito de fragmentação de grupos grandes em vários subgrupos menores, não sinal de coluna errada — mesmo padrão observado depois em Aposentadorias); `+ carreira` reduziu para 354; `+ grupo_cargo` (as 6 colunas completas) fechou em 0. `fct_depro_cargos` materializado com 142.404 linhas, equivalente a 100% de `stg_depro__cargos` (grão já sem duplicidade, nenhuma linha perdida ou fundida). 8/8 testes dbt aprovados.
 
-**Medida:** `quantidade`
+**Achado — exceção de classificação (FUNAI/PECFUNAI, Sprint 4.6, 06/09/2026):** 8 linhas (0,006% da população) com `grupo_cargo` nulo, concentradas exclusivamente em `orgao_codigo_siorg = 173` (FUNAI), `carreira = "PLANO ESPECIAL DE CARGOS DA FUNAI - PECFUNAI"`, `cargo = "AUXILIAR EM INDIGENISMO - NA"`, distribuídas em 8 meses (jul/2025 a fev/2026). A `quantidade` associada é real e válida (68-71 servidores por mês). Causa raiz: a taxonomia de `grupo_cargo` da fonte (SEGES/Raio-X) aparentemente não cobre esse plano de carreira específico de órgão único — limitação de classificação da origem, não erro de ingestão. **Decisão:** a linha é preservada no fato (o dado de headcount tem valor analítico); o teste `not_null` de `grupo_cargo` exclui esse caso especificamente via `where`, em vez de descartar a linha.
+
+**Medida:** `quantidade` (agregada via `SUM`, por consistência estrutural com os demais fatos DEPRO — o grão já não apresenta duplicidade, então `SUM` e valor bruto coincidem, mas a agregação protege contra reintrodução futura de duplicidade pela fonte)
 
 **Dimensões:**
 - `orgao_codigo_siorg` → `dim_orgao_depro`
-- `year` / `month` → `dim_tempo`
+- `year` / `month` → `dim_tempo` (via `ano_mes`)
 
-**Atributos degenerados:** `carreira`, `grupo_cargo`, `cargo`
+**Atributos degenerados:** `carreira`, `grupo_cargo`, `cargo` — **decisão fundamentada empiricamente (Sprint 4.6, 06/09/2026):** comparação direta de vocabulário entre `stg_depro__cargos` e `stg_depro__aposentadorias` (ambas possuem `grupo_cargo`/`cargo`) mostrou **100% de divergência**: as 1.914 combinações distintas de `grupo_cargo + cargo` em Cargos não têm nenhuma sobreposição com Aposentadorias. São vocabulários genuinamente incompatíveis (provavelmente nomenclatura de cargo efetivo vs. classificação de aposentadoria), mesmo padrão já registrado para órgão (Seção 3.5). Não existe `dim_cargo_depro` compartilhada — forçar uma dimensão conformada aqui repetiria o erro que a incompatibilidade SIAPE↔DEPRO já ensinou a evitar.
+
+**Nota de nomenclatura de medidas:** este fato mantém o nome completo `quantidade` (sem abreviação), consistente com os demais.
 
 ---
 
@@ -219,15 +223,23 @@ Sentinela `id_servidor_portal = '-11'` revalidado: **0 ocorrências**, achado da
 
 **Tipo de fato: com medida.**
 
-**Grão:** `orgao_codigo_siorg + faixa_etaria + natureza_juridica + escolaridade_cargo + plano_carreira + grupo_cargo + cargo + sexo + year + month + ano_aposentadoria`.
+**Grão:** `orgao_codigo_siorg + year + month + ano_aposentadoria + faixa_etaria + natureza_juridica + escolaridade_cargo + plano_carreira + grupo_cargo + cargo + sexo`.
 
-> Decisão arquitetural (07/08/2026): a tabela tem duas dimensões temporais distintas — `year`/`month` (quando a projeção foi apurada) e `ano_aposentadoria` (horizonte da projeção). Mantidas as duas no grão: descartar `year`/`month` perderia a capacidade de analisar revisão da estimativa ao longo do tempo (relevante para o Estudo 2 — simulação de cenários); descartar `ano_aposentadoria` destruiria o propósito da tabela. Verificado empiricamente: 0 grupos duplicados nesse grão, população completa.
+> **Decisão arquitetural (Sprint 3.5, 07/08/2026, mantida):** a tabela tem duas dimensões temporais distintas — `year`/`month` (quando a projeção foi apurada) e `ano_aposentadoria` (horizonte da projeção). Mantidas as duas no grão: descartar `year`/`month` perderia a capacidade de analisar revisão da estimativa ao longo do tempo (relevante para o Estudo 2 — simulação de cenários); descartar `ano_aposentadoria` destruiria o propósito da tabela.
+>
+> **Construção física e revalidação (Sprint 4.6, 06/09/2026):** grão de 11 colunas confirmado empiricamente em população completa, 0 grupos duplicados. `fct_depro_aposentadorias` materializado com 257.547 linhas, equivalente a 100% de `stg_depro__aposentadorias`. 13/13 testes dbt aprovados (com exceções documentadas abaixo).
+
+**Achado — núcleo de classificação incompleta, período jul/2025–fev/2026 (Sprint 4.6, 06/09/2026):** 5.813 linhas (2,26% da população total) com `cargo`, `grupo_cargo` e `plano_carreira` simultaneamente nulos, 100% concentradas nesse intervalo de 8 meses — mas representando apenas ~3,5% das 165.251 linhas do próprio período (não a totalidade dele). Investigação empírica descartou explicação por: `natureza_juridica`, `escolaridade_cargo`, `sexo` (nenhuma converge), `orgao_codigo_siorg` (disperso em 95 órgãos distintos, sem concentração relevante), `ano_aposentadoria` (taxa de nulos estável entre 3,2% e 3,8% em todos os anos projetados, sem tendência), `ingestion_timestamp` (idêntico entre linhas nulas e normais do mesmo período — descarta lote de carga diferente). **Causa raiz não determinável com as colunas disponíveis na Prata** — provável característica de processamento da origem (SEGES), fora do alcance de investigação com o dado disponível.
+
+**Achado — núcleo secundário, período fev–mai/2024 (Sprint 4.6, 06/09/2026):** 72 linhas adicionais (18 por mês, distribuição uniforme) com `grupo_cargo` e `plano_carreira` nulos, mas `cargo` preenchido — subconjunto distinto do núcleo principal, concentrado num segundo intervalo. Coincide com fevereiro/2024, mesmo mês em que `cargos-efetivos.csv` passou a existir no formato ZIP da fonte (Termo de Homologação Bronze, item 8.6) — possível relação com transição de formato da SEGES, não investigada a fundo por não ser bloqueante.
+
+**Decisão:** em ambos os casos, as linhas são preservadas no fato (`quantidade_prevista` é projeção real e válida). Os testes `not_null` de `cargo`, `grupo_cargo` e `plano_carreira` excluem os períodos identificados via `where`, documentando a limitação sem descartar dado.
 
 **Medida:** `quantidade_prevista`
 
 **Dimensões:**
 - `orgao_codigo_siorg` → `dim_orgao_depro`
-- `year` / `month` → `dim_tempo` (apuração)
+- `year` / `month` → `dim_tempo` (apuração, via `ano_mes`)
 
 **Atributos degenerados:** `faixa_etaria`, `natureza_juridica`, `escolaridade_cargo`, `plano_carreira`, `grupo_cargo`, `cargo`, `sexo`, `ano_aposentadoria` (horizonte de projeção)
 
@@ -241,15 +253,23 @@ Sentinela `id_servidor_portal = '-11'` revalidado: **0 ocorrências**, achado da
 
 **Grão:** `orgao_codigo_siorg + year + month`.
 
-> **Anomalia descoberta e corrigida (Sprint 3.5, 07/08/2026):** 385 grupos com linhas paralelas para o mesmo órgão/mês, com **medidas diferentes** entre si (não duplicação de linha — os campos descritivos são idênticos, mas `quantidade_servidores_*` variam). O dicionário de dados oficial da fonte (SEGES/Raio-X, `repositorio.dados.gov.br/seges/raio-x/dicionario-de-dados.odt`) confirma que a tabela `alocacao-servidores.csv` **não tem nenhuma dimensão adicional** além de órgão e `ano_mes_referencia` — ou seja, essas linhas paralelas **violam o grão que a própria fonte declara ter**. Causa raiz não determinável a partir da documentação disponível (mesmo `ingestion_timestamp` nas linhas paralelas, descartando hipótese de reprocessamento em datas diferentes).
+> **Anomalia descoberta e corrigida (Sprint 3.5, 07/08/2026):** 385 grupos com linhas paralelas para o mesmo órgão/mês, com medidas diferentes entre si. Dicionário oficial da fonte (SEGES/Raio-X) confirma que a tabela não tem dimensão adicional além de órgão e `ano_mes_referencia` — as linhas paralelas violam o grão que a própria fonte declara ter. Causa raiz não determinável (mesmo `ingestion_timestamp` nas linhas paralelas, descarta reprocessamento em datas diferentes).
 >
-> **Correção aplicada:** agregação via `SUM` das 5 medidas no grão `orgao_codigo_siorg + year + month`, absorvendo as linhas paralelas. Total bruto pré-agregação de `quantidade_servidores_quadro_pessoal`: 28.012.958 — validado como base de comparação para conferir que a soma não distorce o total geral após a agregação no model físico (Fase 4).
+> **Magnitude exata (Sprint 4.6, 06/09/2026):** dos 385 grupos duplicados, **914 linhas estão envolvidas — 7,97% da população total** (914 de 11.466 linhas), proporção bem acima de outros resíduos já tratados no projeto (ex.: 173 linhas/0,002% em Afastamentos). Achado estrutural relevante, não anomalia marginal. Investigação de um grupo representativo (órgão 244/MEC, 2020-06, 3 linhas) confirmou: campos descritivos idênticos, `ingestion_timestamp` idêntico ao microssegundo entre as 3 linhas (descarta reprocessamento), medidas diferentes e plausíveis — consistente com três sub-populações legítimas do mesmo órgão publicadas como linhas paralelas pela fonte, sem coluna discriminante disponível.
+>
+> **Construção física (Sprint 4.6, 06/09/2026):** agregação via `SUM` das 5 medidas aplicada no grão confirmado. Gabarito pré-cálculo: `11.466 − 914 + 385 = 10.937`. `fct_depro_alocacao` materializado com **10.937 linhas**, conferido exato contra o gabarito. 5/5 testes dbt aprovados.
 
-**Medidas:** `quantidade_servidores_cedidos_apf`, `quantidade_servidores_cedidos_outros`, `quantidade_servidores_cedidos`, `quantidade_servidores_quadro_pessoal`, `quantidade_estagiarios`
+**Medidas:** `qtd_servidores_cedidos_apf`, `qtd_servidores_cedidos_outros`, `qtd_servidores_cedidos`, `qtd_servidores_quadro_pessoal`, `qtd_estagiarios`
+
+> **Nota de nomenclatura (Sprint 4.6, 06/09/2026):** este fato usa nomes de medida abreviados (`qtd_*`), decisão deliberada, divergente da convenção de nome completo (`quantidade_*`) usada nos 6 fatos anteriores do projeto, incluindo os outros 2 fatos DEPRO desta mesma sprint (2.5, 2.6). Divergência registrada aqui para rastreabilidade — sem padronização retroativa aplicada nesta sprint.
 
 **Dimensões:**
 - `orgao_codigo_siorg` → `dim_orgao_depro`
-- `year` / `month` → `dim_tempo`
+- `year` / `month` → `dim_tempo` (via `ano_mes`)
+
+---
+
+**Nota transversal aos 3 fatos DEPRO — ausência de `id_servidor_portal` (Sprint 4.6, 06/09/2026):** confirmado via schema real do BigQuery que nenhuma das 3 fontes DEPRO (`stg_depro__alocacao`, `stg_depro__cargos`, `stg_depro__aposentadorias`) carrega `id_servidor_portal`. Isso **contradiz** a afirmação do ADR-009 ("chave universal... presente nas bases do Portal da Transparência (SIAPE) e DEPRO"). Correção formal do ADR-009 pendente, registrada como ação de fechamento desta sprint — ver Seção 4.
 
 ---
 
@@ -353,3 +373,7 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 | 17/08/2026 | ADR-017 atualizado: `sk_vinculo` passa de 6 para 8 colunas (`+matricula`, `+situacao_vinculo`, `+cod_uorg_exercicio`); Fato Vínculo/Ativos fisicamente construído na Fase 4 (Sprint 4.3), 96.563.830 linhas, 11/11 testes dbt aprovados | Sprint 4.3 — schema real de `stg_siape__ativos` na Fase 4 mais rico que o disponível na Sprint 3.5; validação incremental em população completa (nunca amostra) reduziu resíduo de 242.588 → 0 grupos duplicados |
 | 21/08/2026 | Grão do Fato Situação de Vínculo revalidado na Fase 4 (Sprint 4.4): composição provisória da Sprint 3.5 (6 colunas) descartada; nova chave de 7 colunas (`sk_situacao_vinculo`) fecha 100% do grão em população completa | Sprint 4.4 `stg_siape__aposentados` não possui `cod_uorg_exercicio` (existe apenas em Ativos), tornando a chave de 8 colunas do ADR-017 inaplicável; `cod_tipo_vinculo` (não `situacao_vinculo`) foi a coluna dominante nesta fonte, padrão inverso ao de Ativos; `fct_situacao_vinculo` materializado, 76.314.587 linhas, 13/13 testes dbt aprovados |
 | 24/08/2026 | Grão do Fato Afastamentos revalidado na Fase 4 (Sprint 4.5): 5 colunas naturais confirmam 0 grupos duplicados em população completa; decisão de não usar chave surrogate, critério de "grão enxuto" formalizado | Sprint 4.5, `fct_afastamentos` materializado, 9.069.323 linhas, 5/5 testes dbt aprovados; achados da Sprint 3.5 (bug de duplicação exata corrigido, sentinela `-11` ausente, 173 linhas nulas excluídas) todos revalidados sem alteração |
+| 06/09/2026 | Fato Cargos DEPRO fisicamente construído (Sprint 4.6): 142.404 linhas, grão de 6 colunas confirmado sem duplicidade; exceção FUNAI/PECFUNAI (8 linhas, grupo_cargo nulo) tratada via `where` no teste, linha preservada | Sprint 4.6 — dim_cargo_depro descartada por incompatibilidade total de vocabulário (0% de sobreposição) entre stg_depro__cargos e stg_depro__aposentadorias |
+| 06/09/2026 | Fato Aposentadorias Previstas DEPRO fisicamente construído (Sprint 4.6): 257.547 linhas, grão de 11 colunas confirmado; dois núcleos de classificação incompleta identificados (5.813 linhas em jul/2025-fev/2026, 72 linhas em fev-mai/2024), causa raiz não determinável, linhas preservadas via `where` nos testes | Sprint 4.6 — investigação empírica descartou natureza_juridica, escolaridade_cargo, sexo, orgao_codigo_siorg, ano_aposentadoria e ingestion_timestamp como causa |
+| 06/09/2026 | Fato Alocação DEPRO fisicamente construído (Sprint 4.6): 10.937 linhas, gabarito pré-cálculo (11.466 − 914 + 385) conferido exato; magnitude real do achado de 07/08/2026 quantificada em 7,97% da população (914 linhas) | Sprint 4.6 |
+| 06/09/2026 | Ausência de `id_servidor_portal` confirmada nas 3 fontes DEPRO via schema real — contradiz afirmação do ADR-009. Correção formal do ADR-009 registrada como pendência de fechamento da sprint | Sprint 4.6 |

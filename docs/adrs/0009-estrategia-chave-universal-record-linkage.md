@@ -37,3 +37,21 @@ Condições de promoção originalmente definidas — status:
 - As APIs restritas (SIAPEcad, SIGEPE, SouGov) permanecem bloqueadas (Fase 1) e seu campo de cruzamento ainda não foi verificado. Se, quando desbloqueadas, não entregarem `id_servidor_portal` nem CPF compatível, será necessário avaliar record linkage probabilístico (nome + órgão + data de ingresso) como fallback.
 - O PEP (`br_mp_pep.cargos_funcoes`) é uma fonte agregada, sem chave individual — não participa do record linkage e não deve ser forçado a isso em nenhuma modelagem futura.
 - **ENAP sem linkage (confirmado, não mais hipótese):** caso um estudo futuro exija cruzar capacitação com dados de RH a nível de servidor, será necessário avaliar linkage probabilístico (nome + UF + idade aproximada), com validação estatística de precisão antes de qualquer uso analítico — conforme exigência do Edital 03 de auditoria do record linkage.
+
+## Revisão (Sprint 4.6, 06/09/2026)
+
+**Status da correção:** Decisão original mantida como válida para SIAPE. Afirmação sobre DEPRO **corrigida** — estava factualmente incorreta.
+
+**Achado:** durante a construção dos 3 fatos DEPRO (Sprint 4.6), inspeção do schema real das 3 fontes atualmente ingeridas (`stg_depro__alocacao`, `stg_depro__cargos`, `stg_depro__aposentadorias`, todas originárias do SEGES/Raio-X) confirmou que **nenhuma delas possui `id_servidor_portal`** ou qualquer coluna equivalente de identificação individual. As 3 fontes são inerentemente pré-agregadas no nível de órgão (contagens de servidores, cargos e projeções de aposentadoria por `orgao_codigo_siorg`), sem granularidade de pessoa física.
+
+Isso contradiz diretamente a afirmação original deste ADR de que `id_servidor_portal` está "presente nas bases do Portal da Transparência (SIAPE) e DEPRO", e a decisão de "chave composta... adotada para essas duas fontes".
+
+**Causa provável da imprecisão original:** a inspeção de 28/03/2026 (Fase 1) provavelmente foi feita sobre uma concepção diferente de "base DEPRO" — possivelmente cogitada nas fases iniciais do projeto mas nunca efetivamente ingerida no formato atual, ou uma confusão entre a disponibilidade de `id_servidor_portal` no Portal da Transparência (SIAPE) e uma suposição não verificada de que o mesmo valeria para DEPRO. Não foi possível reconstituir a evidência original que sustentou a afirmação.
+
+**Correção formal:**
+- `id_servidor_portal` é chave universal **apenas para as fontes SIAPE** (Ativos, Remuneração, Aposentados, Afastamentos) — não para DEPRO.
+- As 3 fontes DEPRO **não participam de record linkage individual** com SIAPE. São tratadas, para efeito de granularidade, de forma equivalente ao PEP e à ENAP: fatos independentes, sem join a nível de servidor.
+- O único eixo de cruzamento válido entre DEPRO e o restante do projeto é organizacional — e mesmo esse é limitado: `orgao_codigo_siorg` (DEPRO) e `cod_org_lotacao` (SIAPE) são taxonomias incompatíveis (apenas 1 código em comum entre 381 e 198 valores distintos, ver `MODELO_DIMENSIONAL_GOLD.md`, Seção 3.5), sem tabela de-para disponível nas fontes atuais.
+- Nenhum estudo dos 4 editais mapeado até a Sprint 4.6 exige linkage individual DEPRO↔SIAPE — a limitação é registrada por rigor documental, não por bloqueio ativo a um requisito conhecido.
+
+**Impacto retroativo:** nenhum. Nenhum model físico construído até esta sprint assumiu `id_servidor_portal` em DEPRO — os 3 fatos DEPRO (Sprint 4.6) já foram desenhados corretamente com FK exclusiva para `dim_orgao_depro`, sem tentativa de join individual. A correção é documental, não estrutural.
