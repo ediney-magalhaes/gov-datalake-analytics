@@ -279,32 +279,44 @@ Sentinela `id_servidor_portal = '-11'` revalidado: **0 ocorrências**, achado da
 
 **Tipo de fato: com medida (transacional).** Diferente das demais fontes SIAPE, tem medida numérica real: `carga_horaria` (horas de treinamento).
 
-**Grão:** `sk_matricula`, chave surrogate técnica:
+**Grão — revalidado na Fase 4 (Sprint 4.7, 03/10/2026):** a composição registrada na Sprint 3.5 (`cod_matricula + codigo_pessoa + cod_turma + dt_matricula`) foi descartada e o grão reconstruído do zero contra o schema real de `stg_enap__capacitacao` na Fase 4.
+
+**Achado — `cod_matricula` não é chave confiável (Sprint 4.7, 03/10/2026):** `cod_matricula` é um identificador tipo hash (10 caracteres hex, mesmo padrão de `cod_curso`/`codigo_pessoa`/`cod_turma`), sem nulos (0 em 19.346.163 linhas), mas **não único**: 172 grupos colididos. Investigação de exemplo real confirmou que as colisões envolvem eventos de matrícula genuinamente não relacionados pessoas, cursos e datas diferentes compartilhando o mesmo `cod_matricula`. Diagnóstico: colisão de hash truncado em base de 19M+ linhas, não duplicidade de registro. `cod_matricula` não serve como base do grão, nem sozinho nem combinado com outras colunas, foi mantido apenas como atributo degenerado, sem papel na chave.
+
+**Grão real validado empiricamente (Sprint 4.7, 03/10/2026):** `codigo_pessoa + cod_curso + cod_turma + dt_matricula`. Processo de descoberta, população completa: candidato inicial `codigo_pessoa + cod_curso + dt_matricula` (sem `cod_turma`) tinha 142 grupos duplicados; investigação de exemplo real mostrou mesma pessoa, mesmo curso, mesma `dt_matricula`, mas `cod_turma` e `sit_matricula` divergentes, padrão de desistência seguida de nova matrícula em outra turma do mesmo curso. Adicionar `cod_turma` fechou o grão: **0 grupos duplicados** em população completa.
+
 ```sql
-{{ dbt_utils.generate_surrogate_key(['cod_matricula', 'codigo_pessoa', 'cod_turma', 'dt_matricula']) }} as sk_matricula
+{{ dbt_utils.generate_surrogate_key(['codigo_pessoa', 'cod_curso', 'cod_turma', 'dt_matricula']) }} as sk_matricula
 ```
 
-> **Achado — colisão de chave natural (Sprint 3.5, 07/08/2026):** `cod_matricula` sozinho tinha 172 colisões em 19.346.163 linhas (total ≠ distintos). Investigação de exemplo real confirmou que são matrículas genuinamente diferentes (cursos, pessoas, datas distintas) compartilhando o mesmo `cod_matricula` — hash truncado (10 caracteres hex) sem garantia de unicidade global em base de 19M+ linhas (paradoxo do aniversário). Resolvido via chave composta `cod_matricula + codigo_pessoa + cod_turma + dt_matricula` — verificado empiricamente: 0 grupos duplicados após a composição.
+**Cobertura de FKs confirmada (Sprint 4.7, 03/10/2026):** `codigo_pessoa` vs. `dim_pessoa_enap` e `cod_curso` vs. `dim_curso_enap`, população completa, **0 órfãos** em ambos os casos `LEFT JOIN` seguro, sem risco de FK nula.
 
-**Medida:** `carga_horaria`
+**Ancoragem temporal confirmada (Sprint 4.7, 03/10/2026):** `year`/`month` já existentes na Prata validados contra `EXTRACT(year/month FROM dt_inicio)`, população completa, **0 linhas divergentes**, confirma que a decisão de ancorar o fato em `dt_inicio` (29/06/2026) já está refletida corretamente na ingestão, sem necessidade de recálculo no Gold.
+
+**Medida:** `carga_horaria` (já `INTEGER` na Prata, sem cast necessário).
 
 **Dimensões:**
-- `codigo_pessoa` → `dim_pessoa_enap` (independente de `dim_servidor` — ver nota abaixo)
-- `year` / `month` → `dim_tempo` (ancorado em `dt_inicio`, decidido na ingestão Bronze)
-- `cod_curso` / `nome_curso` / `modalidade_turma` / `conteudista` / `tematica` → `dim_curso_enap`
+- `codigo_pessoa` → `dim_pessoa_enap`
+- `cod_curso` → `dim_curso_enap`
+- `year` / `month` → `dim_tempo` (via `ano_mes`, ancorado em `dt_inicio`)
 
-**Atributos degenerados:** `sit_matricula`, `cod_turma` / `nome_turma`
+**Atributos degenerados:** `cod_matricula`, `cod_turma`, `nome_turma`, `dt_matricula`, `dt_inicio`, `dt_fim`. `dt_inicio`/`dt_fim` permanecem no fato especificamente porque a Ponte Capacitação × Mês (Sprint 4.8) depende delas para expandir a duração do curso.
 
-**Decisão arquitetural — fato independente:** `codigo_pessoa` é um ID proprietário da plataforma EV.G (Escola Virtual Gov), sem relação documentada com CPF ou `id_servidor_portal`. A abordagem prevista na ADR-009 (rehash SHA-256 para compatibilizar com SIAPE) se mostrou tecnicamente inviável. ENAP é tratado como **fato independente**, mesmo padrão do PEP — sem record linkage nível-servidor com SIAPE/DEPRO (decisão de 03/08/2026, mantida).
+**Decisão — `modalidade_turma` excluída do fato (Sprint 4.7, 03/10/2026):** `modalidade_turma` já é atributo estável de `dim_curso_enap` (Sprint 4.1). Foi incluída por engano na primeira versão do modelo e removida ao cruzar com a Seção 3.7 desta própria documentação, mesmo princípio já aplicado às demais colunas de pessoa (`sexo`, `raca`, `instituicao` etc.), que vivem em `dim_pessoa_enap` e não entram no fato.
 
-**Pendência arquitetural formal — Ponte Capacitação × Mês:** cursos com `dt_inicio`/`dt_fim` em meses diferentes não são "espalhados" no fato transacional (que registra o evento no mês de início, coerente com o restante do modelo). Para métricas de **exposição/estoque** ("quantos servidores em capacitação durante o mês X"), decidiu-se (29/06/2026) que isso será resolvido por uma **tabela ponte/factless separada** na Camada Gold, expandindo `dt_inicio`→`dt_fim` em uma linha por mês de duração — construção física **deferida para a Fase 4**, não faz parte do escopo da Sprint 3.5.
+**Decisão — `situacao_matricula` recodificada em 4 categorias, não 3 (Sprint 4.7, 03/10/2026):** a regra herdada de uma versão anterior do projeto (`analytics_gov`, protótipo descontinuado) agrupava `Reprovado` dentro de `Evadido`. Revisado nesta sprint: `Reprovado` é conclusão de percurso com resultado negativo (a pessoa chegou ao fim do curso e não atingiu o critério de aprovação), fenômeno de negócio distinto de abandono antes do fim (`Desistente`/`Trancada`/`Não Concluído`). Categorias finais, validadas contra a distribuição real de `sit_matricula` (população completa, 5 valores, sem resíduo fora do mapeamento):
+- `Concluida` → `Concluído`
+- `Reprovado` → `Não Aprovado`
+- `Desistente`, `Trancada`, `Não Concluído` → `Evadido`
+- qualquer outro valor → `Não Informado` (categoria de defesa, vazia na população atual)
 
-**Bug de tipo descoberto e corrigido (Sprint 3.5, 07/08/2026):** colunas `idade` e `carga_horaria`, declaradas `INTEGER` na External Table Bronze com `autodetect: true`, causavam erro `unsupported Parquet type (BYTE_ARRAY) for GoogleSQL type (INT64)`. Causa raiz: ingestão via `pl.scan_csv()` sem `schema_overrides`, com inferência de tipo feita partição por partição (132 partições mensais) — algumas gravaram as colunas como `Int64`, outras como `String`, gerando schemas Parquet fisicamente inconsistentes entre arquivos. `year`/`month` não afetados (confirmado). Correção aplicada:
-1. Script pontual (`scripts/fix_tipos_enap_capacitacao.py`) reescreveu as 132 partições no GCS, forçando `idade`/`carga_horaria` como `string` de forma consistente
-2. External Table recriada com schema explícito via `bq mkdef` + edição manual (`infra/external_tables/bronze_enap_capacitacao.json`), sem `autodetect`, com `idade`/`carga_horaria` declaradas `STRING`
-3. `stg_enap__capacitacao.sql` já continha `SAFE_CAST(idade AS INT64)` e `SAFE_CAST(carga_horaria AS INT64)` — corrigida uma vírgula faltante na CTE `final`
+**Decisão arquitetural — fato independente (mantida, Sprint 3.5):** `codigo_pessoa` é um ID proprietário da plataforma EV.G, sem relação documentada com CPF ou `id_servidor_portal`. A abordagem prevista na ADR-009 (rehash SHA-256 para compatibilizar com SIAPE) se mostrou tecnicamente inviável. ENAP é tratado como **fato independente**, sem record linkage nível-servidor com SIAPE/DEPRO, qualquer estudo de Track B/C que precise cruzar capacitação com remuneração/carreira no nível individual não pode ser resolvido via JOIN no Gold.
 
-Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de `idade`/`carga_horaria`/`year`/`month` confirmada.
+**Bug de tipo `idade`/`carga_horaria` (histórico, Sprint 3.5, 07/08/2026, confirmado já resolvido nesta sprint):** causa raiz era inferência de tipo inconsistente entre as 132 partições Bronze (`pl.scan_csv()` sem `schema_overrides`). Corrigido via reescrita das partições + External Table sem `autodetect`. Confirmado nesta sprint: `carga_horaria` chega à Prata já como `INTEGER`, sem necessidade de cast no Gold.
+
+**Construção física (Sprint 4.7, 03/10/2026):** `fct_enap_capacitacao` materializado com **19.346.163 linhas**, equivalente a 100% de `stg_enap__capacitacao` (contagem exata, sem perda nem duplicação). 14/14 testes dbt aprovados.
+
+**Pendência arquitetural formal — Ponte Capacitação × Mês (mantida):** cursos com `dt_inicio`/`dt_fim` em meses diferentes não são "espalhados" no fato transacional (que registra o evento no mês de início, coerente com o restante do modelo). Para métricas de **exposição/estoque** ("quantos servidores em capacitação durante o mês X"), construção física **deferida para a Sprint 4.8** (tabela ponte/factless, expandindo `dt_inicio`→`dt_fim` em uma linha por mês de duração).
 
 ---
 
@@ -377,3 +389,4 @@ Validado: `dbt run --select stg_enap__capacitacao` executa sem erro, leitura de 
 | 06/09/2026 | Fato Aposentadorias Previstas DEPRO fisicamente construído (Sprint 4.6): 257.547 linhas, grão de 11 colunas confirmado; dois núcleos de classificação incompleta identificados (5.813 linhas em jul/2025-fev/2026, 72 linhas em fev-mai/2024), causa raiz não determinável, linhas preservadas via `where` nos testes | Sprint 4.6 — investigação empírica descartou natureza_juridica, escolaridade_cargo, sexo, orgao_codigo_siorg, ano_aposentadoria e ingestion_timestamp como causa |
 | 06/09/2026 | Fato Alocação DEPRO fisicamente construído (Sprint 4.6): 10.937 linhas, gabarito pré-cálculo (11.466 − 914 + 385) conferido exato; magnitude real do achado de 07/08/2026 quantificada em 7,97% da população (914 linhas) | Sprint 4.6 |
 | 06/09/2026 | Ausência de `id_servidor_portal` confirmada nas 3 fontes DEPRO via schema real — contradiz afirmação do ADR-009. Correção formal do ADR-009 registrada como pendência de fechamento da sprint | Sprint 4.6 |
+| 03/10/2026 | Fato Capacitação ENAP revalidado e fisicamente construído na Fase 4 (Sprint 4.7): grão de `cod_matricula` (Sprint 3.5) descartado, provado hash colidente, 172 grupos em 19,3M linhas; novo grão de 4 colunas (`codigo_pessoa + cod_curso + cod_turma + dt_matricula`) fecha 100% em população completa; `situacao_matricula` recodificada em 4 categorias (não 3), separando `Reprovado` de `Evadido`; `modalidade_turma` removida do fato por já existir em `dim_curso_enap` | Sprint 4.7 — `fct_enap_capacitacao` materializado, 19.346.163 linhas, 14/14 testes dbt aprovados |
